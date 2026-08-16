@@ -18,7 +18,7 @@ async def read_live_aqi(
     waqi_token: Optional[str] = Query(None, description="Optional WAQI API key token for ground stations")
 ) -> Dict[str, Any]:
     """Fetch real-time live AQI and pollutant telemetry for any city (Keyless Open-Meteo or WAQI)."""
-    data = get_live_city_aqi(city=city, waqi_token=waqi_token)
+    data = get_live_city_aqi(city=city, custom_key=waqi_token)
     return data
 
 @router.get("/live-cities")
