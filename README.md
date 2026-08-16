@@ -17,12 +17,12 @@
 
 <p align="center">
   <a href="#-key-features--capabilities">Key Features</a> •
+  <a href="#-cnn--bilstm-deep-learning-architecture">CNN & BiLSTM Architecture</a> •
   <a href="#-system-architecture">System Architecture</a> •
   <a href="#-explainable-ai-xai--model-interpretability">Explainable AI</a> •
   <a href="#-model-evaluation--performance">Model Performance</a> •
   <a href="#-research-paper-references">Research References</a> •
-  <a href="#-installation--getting-started">Installation</a> •
-  <a href="#-api-reference">API Reference</a>
+  <a href="#-installation--getting-started">Installation</a>
 </p>
 
 </div>
@@ -33,22 +33,22 @@
 
 **AQI Multimodal AI** is an advanced environmental sensing platform engineered to revolutionize Air Quality Index (AQI) forecasting and health exposure modeling. By fusing **outdoor optical sky imagery** (captured via smartphones or surveillance stations) with **14-day temporal pollutant telemetry** ($\text{PM}_{2.5}$, $\text{PM}_{10}$, $\text{NO}_2$, $\text{SO}_2$, $\text{CO}$, $\text{O}_3$), the system overcomes the fundamental limitations of single-modality models.
 
-Conventional regional sensor networks miss localized hyper-pollutant events (such as industrial flare-ups or municipal waste fires), while standard computer vision approaches lack temporal depth. **AQI Multimodal AI** closes this gap using a **Cross-Attention Multimodal Deep Neural Network**, supported by a **Precautionary Safety-First Visual Override** engine, **Grad-CAM & SHAP explainability pipelines**, and a clinical-grade **Health Risk Guidance Engine**.
+Conventional regional sensor networks miss localized hyper-pollutant events (such as industrial flare-ups or municipal waste fires), while standard computer vision approaches lack temporal depth. **AQI Multimodal AI** closes this gap using a **Convolutional Neural Network (CNN) + Bidirectional LSTM (BiLSTM) Cross-Attention Deep Network**, supported by a **Precautionary Safety-First Visual Override** engine, **Grad-CAM & SHAP explainability pipelines**, and a clinical-grade **Health Risk Guidance Engine**.
 
 ---
 
 ## 🚀 Key Features & Capabilities
 
 ### 📸 1. Dual-Branch Vision & Sensor Telemetry
-* **Computer Vision Branch**: Leverages transfer-learned **EfficientNetB0 / ResNet** backbones to extract spatial aerosol density, atmospheric light extinction coefficients, and visual haze features from ambient sky photography.
-* **Temporal Sensor Branch**: Employs a **Bidirectional LSTM (BiLSTM) with Temporal Attention Pooling** to ingest 14-day sliding sequences across 42 engineered metrics (including 7-day rolling means, standard deviations, lag-1/lag-7 differentials, and cyclic $\sin/\cos$ seasonal encodings).
+* **CNN Computer Vision Branch**: Leverages transfer-learned **EfficientNetB0 / ResNet** backbones to extract spatial aerosol density, atmospheric light extinction coefficients, and visual haze features from ambient sky photography.
+* **BiLSTM Temporal Sensor Branch**: Employs a **Bidirectional LSTM (BiLSTM) with Temporal Attention Pooling** to ingest 14-day sliding sequences across 42 engineered metrics (including 7-day rolling means, standard deviations, lag-1/lag-7 differentials, and cyclic $\sin/\cos$ seasonal encodings).
 
 ### ⚡ 2. Safety-First Visual Precautionary Principle
 Regional air stations often report "Good" air quality during localized toxic hazards (e.g., crop burning or chemical spills) due to spatial sensor spacing. Our proprietary **Pixel-Level Spectrum & Haze Ratio Detector** computes blue-to-red spectral deltas ($B - R$) and color saturation proxies to trigger visual overrides when severe visual hazards conflict with regional sensor streams.
 
 ### 🧠 3. Interactive Explainable AI (XAI) Suite
-* **Grad-CAM (Gradient-Weighted Class Activation Mapping)**: Renders high-resolution spatial heatmap overlays and $3 \times 3$ sub-region activation grids on outdoor sky images, pin-pointing visual pollution indicators.
-* **SHAP (SHapley Additive exPlanations)**: Calculates game-theoretic feature contribution values across all 42 tabular time-series parameters, generating waterfall charts and impact rankings for clinical transparency.
+* **Grad-CAM (Gradient-Weighted Class Activation Mapping)**: Renders high-resolution spatial heatmap overlays and $3 \times 3$ sub-region activation grids on outdoor sky images, pin-pointing visual pollution indicators derived from CNN feature maps.
+* **SHAP (SHapley Additive exPlanations)**: Calculates game-theoretic feature contribution values across all 42 tabular time-series parameters processed by the BiLSTM, generating waterfall charts and impact rankings.
 
 ### 🔮 4. 7-Day Predictive Air Quality Forecasting
 Constructs multi-step autoregressive AQI forecasts over a 7-day horizon, complete with confidence intervals, category transitions, and dominant pollutant breakdowns.
@@ -56,8 +56,60 @@ Constructs multi-step autoregressive AQI forecasts over a 7-day horizon, complet
 ### 🩺 5. Clinical Health Risk & Actionable Guidance Engine
 Maps AQI predictions against WHO (2021) and US EPA guidelines to generate personalized health advisories for high-risk demographics (asthma patients, children, elderly, outdoor workers), complete with mask recommendations (N95/FFP2), indoor HEPA filtration parameters, and outdoor activity constraints.
 
-### 💻 6. Modern Black & Emerald Cyberpunk UI
-Designed with a sleek obsidian glassmorphism aesthetic (`#07090e` background with `#00E5B0` / `#10B981` emerald neon highlights), interactive Recharts visualizations, Framer Motion transitions, audio narration, and historical timeline drawers.
+---
+
+## 🧠 CNN & BiLSTM Deep Learning Architecture
+
+The core innovation of **AQI Multimodal AI** lies in the synergistic combination of **Convolutional Neural Networks (CNN)** for spatial visual feature extraction and **Bidirectional Long Short-Term Memory Networks (BiLSTM)** for temporal pollutant sequence modeling.
+
+```
+┌──────────────────────────────────────────────────────────────────────────────────┐
+│                             AQI MULTIMODAL DUAL PIPELINE                         │
+├──────────────────────────────────────────┬───────────────────────────────────────┤
+│    👁️ CNN IMAGE BRANCH (Spatial)         │    📈 BiLSTM SENSOR BRANCH (Temporal)  │
+├──────────────────────────────────────────┼───────────────────────────────────────┤
+│ • Backbone: EfficientNetB0 / ResNet      │ • Sequence Depth: 14 Sliding Days     │
+│ • Input: 128x128x3 Ambient Sky Image     │ • Input: 42 Telemetry Features        │
+│ • Extracts: Aerosol extinction, haze     │ • Layers: Forward & Backward LSTMs    │
+│ • Explainability: Grad-CAM Heatmaps      │ • Explainability: SHAP Feature Values │
+└──────────────────────────────────────────┴───────────────────────────────────────┘
+```
+
+### 👁️ 1. Convolutional Neural Network (CNN) Visual Branch
+The CNN branch acts as an automated visual atmospheric sensor, extracting fine-grained spatial representations from outdoor sky photography:
+
+* **Architecture Backbone**: Employs transfer learning with **EfficientNetB0 / ResNet-50** initialized on ImageNet weights, fine-tuned specifically for atmospheric aerosol optical depth (AOD) estimation.
+* **Input Preprocessing**: Resizes incoming RGB sky photographs to $128 \times 128 \times 3$ and applies EfficientNet preprocessing normalization.
+* **Spatial Feature Extraction**:
+  $$\mathbf{F}_{\text{img}} = \text{CNN}_{\text{backbone}}(\mathbf{X}_{\text{img}}) \in \mathbb{R}^{H' \times W' \times C}$$
+  The spatial feature tensor is transformed into a dense 256-dimensional visual embedding $\mathbf{z}_{\text{img}} \in \mathbb{R}^{256}$.
+* **Physical Intuition**: The CNN identifies visual environmental cues invisible to distant gas sensors—such as high-altitude particulate attenuation, distant smoke plumes, industrial chimney emissions, and sky color degradation.
+* **Grad-CAM Integration**: Gradients flowing from the top predicted AQI category back to the final convolutional layer (`top_conv`) generate spatial activation heatmaps, highlighting exactly which sky sub-regions triggered the prediction.
+
+---
+
+### 📈 2. Bidirectional LSTM (BiLSTM) Time-Series Sensor Branch
+While spatial imagery provides instantaneous local context, atmospheric pollution is inherently cumulative over time. The BiLSTM branch captures historical build-up trends and multi-pollutant interactions:
+
+* **Temporal Window & Feature Matrix**: Ingests a 14-day historical sequence matrix $\mathbf{X}_{\text{ts}} \in \mathbb{R}^{14 \times 42}$, containing 6 criteria pollutants ($\text{PM}_{2.5}$, $\text{PM}_{10}$, $\text{NO}_2$, $\text{SO}_2$, $\text{CO}$, $\text{O}_3$) alongside 36 engineered features (7-day rolling means, 7-day rolling standard deviations, 1-day/7-day lag differentials, and cyclic $\sin/\cos$ seasonal encodings).
+* **Bidirectional Temporal Encoding**:
+  A forward LSTM $\overrightarrow{\text{LSTM}}$ and backward LSTM $\overleftarrow{\text{LSTM}}$ process the time series simultaneously to capture past accumulation and future trend trajectories:
+  $$\overrightarrow{h}_t = \overrightarrow{\text{LSTM}}(x_t, \overrightarrow{h}_{t-1}), \quad \overleftarrow{h}_t = \overleftarrow{\text{LSTM}}(x_t, \overleftarrow{h}_{t+1})$$
+  $$h_t = [\overrightarrow{h}_t \,;\, \overleftarrow{h}_t] \in \mathbb{R}^{2d}$$
+* **Temporal Attention Pooling (`AttentionPool`)**:
+  Rather than simply selecting the final hidden state $h_{14}$, a custom temporal attention layer dynamically weights each day's importance based on historical pollutant spikes:
+  $$e_t = \mathbf{v}^T \tanh(W_h h_t + b_h), \quad \alpha_t = \frac{\exp(e_t)}{\sum_{k=1}^{14} \exp(e_k)}$$
+  $$\mathbf{z}_{\text{ts}} = \sum_{t=1}^{14} \alpha_t h_t \in \mathbb{R}^{256}$$
+* **SHAP Feature Attribution**: Every pollutant parameter passed into the BiLSTM branch is evaluated via game-theoretic SHAP values, quantifying exactly how much $\text{PM}_{2.5}$ spike vs. $\text{NO}_2$ accumulation pushed the output category.
+
+---
+
+### ⚡ 3. Inter-Modal Cross-Attention Fusion
+The visual embedding $\mathbf{z}_{\text{img}}$ from the CNN and the temporal embedding $\mathbf{z}_{\text{ts}}$ from the BiLSTM are fused using a **Multi-Head Cross-Attention** layer. The CNN visual features act as Queries ($Q$), while the BiLSTM sensory features act as Keys ($K$) and Values ($V$):
+
+$$\text{CrossAttention}(Q, K, V) = \text{Softmax}\left(\frac{Q K^T}{\sqrt{d_k}}\right) V$$
+
+This inter-modal bridge allows the neural network to dynamically balance visual atmosphere cues against sensor telemetry, creating a unified multimodal representation $\mathbf{z}_{\text{fused}}$ fed into the Softmax classification head.
 
 ---
 
@@ -67,29 +119,8 @@ The end-to-end architecture connects a high-throughput **FastAPI** backend with 
 
 ![Multimodal Architecture Diagram](docs/images/architecture.jpg)
 
-### Mathematical Formulation
-
-#### 1. Cross-Attention Fusion Mechanism
-The visual embedding $F_{\text{img}} \in \mathbb{R}^{d}$ and time-series sensor embedding $F_{\text{ts}} \in \mathbb{R}^{d}$ interact via Multi-Head Cross-Attention:
-
-$$\text{Attention}(Q, K, V) = \text{Softmax}\left(\frac{Q K^T}{\sqrt{d_k}}\right) V$$
-
-Where:
-$$Q = W_Q \cdot F_{\text{img}}, \quad K = W_K \cdot F_{\text{ts}}, \quad V = W_V \cdot F_{\text{ts}}$$
-
-The fused multimodal vector $F_{\text{fused}}$ is obtained via residual layer normalization:
-
-$$F_{\text{fused}} = \text{LayerNorm}\left(F_{\text{img}} + F_{\text{ts}} + \text{MHA}(Q, K, V)\right)$$
-
-#### 2. Temporal Attention Pooling
-For time-series hidden states $h_1, h_2, \dots, h_T$ generated by the BiLSTM branch, attention weights $\alpha_t$ are computed as:
-
-$$e_t = \mathbf{v}^T \tanh(W_h h_t + b_h), \quad \alpha_t = \frac{\exp(e_t)}{\sum_{k=1}^T \exp(e_k)}$$
-
-$$c_{\text{ts}} = \sum_{t=1}^T \alpha_t h_t$$
-
-#### 3. Precautionary Visual Override Rule
-Given visual severity rank $R_{\text{vis}} \in \{0..5\}$ and sensor rank $R_{\text{ts}} \in \{0..5\}$, an override is enacted if:
+### Precautionary Visual Override Rule
+Given visual severity rank $R_{\text{vis}} \in \{0..5\}$ and sensor rank $R_{\text{ts}} \in \{0..5\}$, a visual precautionary override is enacted if:
 
 $$\text{Override} = \mathbb{I}\left(R_{\text{vis}} \ge \text{Threshold}_{\text{haze}} \quad \land \quad (R_{\text{vis}} - R_{\text{ts}}) \ge 2\right)$$
 
@@ -101,14 +132,14 @@ Explainability is a core pillar of **AQI Multimodal AI**, ensuring model predict
 
 <div align="center">
 
-### Spatial Visual Explanation via Grad-CAM
+### Spatial Visual Explanation via Grad-CAM (CNN Branch)
 *Highlighting localized haze, smog columns, and sky particulate attenuation.*
 
 ![Grad-CAM Examples](docs/images/gradcam_examples.png)
 
 ---
 
-### Tabular Telemetry Explanation via SHAP
+### Tabular Telemetry Explanation via SHAP (BiLSTM Branch)
 *Quantifying the exact contribution of PM2.5, PM10, NO2, and rolling averages.*
 
 ![SHAP Importance](docs/images/shap_importance.png)
@@ -168,141 +199,28 @@ This project builds upon seminal research papers in multimodal machine learning,
 
 ---
 
-## 📁 Repository Directory Structure
-
-```gcode
-AQI_MULTIMODAL/
-├── docs/
-│   └── images/                       # High-resolution architectural & XAI assets
-│       ├── banner.jpg                # Obsidian & Neon Green Header Banner
-│       ├── architecture.jpg          # Multimodal Fusion & XAI Pipeline Diagram
-│       ├── gradcam_examples.png      # Grad-CAM Visual Heatmap Examples
-│       ├── shap_importance.png       # SHAP Telemetry Feature Importance
-│       └── confusion_matrix.png      # 6-Class Model Confusion Matrix
-├── backend/
-│   ├── app/
-│   │   ├── config.py                 # Environment variables & application settings
-│   │   ├── database.py               # Async SQLAlchemy SQLite engine & session setup
-│   │   ├── main.py                   # FastAPI app entry point & CORS configuration
-│   │   ├── ml_artifacts/             # Pre-trained Keras model, scalers, and mapping files
-│   │   │   ├── aqi_multimodal_model.keras
-│   │   │   ├── scaler.pkl
-│   │   │   ├── label_encoder.pkl
-│   │   │   └── class_mapping.json
-│   │   ├── models/                   # DB ORM models (Predictions, Readings, HealthRisk)
-│   │   ├── routers/                  # API endpoints (predict, explain, forecast, health)
-│   │   ├── schemas/                  # Pydantic validation schemas
-│   │   └── services/                 # Business logic (model inference, Grad-CAM, SHAP)
-│   ├── AQI_Multimodal_Notebook.ipynb# Training, pipeline construction & export notebook
-│   └── requirements.txt              # Backend dependencies
-└── frontend/
-    ├── src/
-    │   ├── api/                      # Axios REST client integration
-    │   ├── components/               # UI components (Navbar, TimelineDrawer, Cards)
-    │   ├── pages/                    # React page views
-    │   │   ├── LandingPage.jsx       # Hero view & feature overview
-    │   │   ├── DashboardPage.jsx     # Real-time multi-city sensor dashboard
-    │   │   ├── PredictionPage.jsx    # Dual-branch multimodal inference submission
-    │   │   ├── ExplainPage.jsx       # Interactive Grad-CAM & SHAP XAI inspector
-    │   │   ├── ForecastPage.jsx      # 7-day predictive trend viewer
-    │   │   └── HealthRiskPage.jsx    # Clinical recommendations & risk profile
-    │   ├── App.jsx                   # Application router & theme layout container
-    │   └── index.css                 # Vanilla CSS & Tailwind v4 design tokens
-    ├── package.json                  # Frontend dependencies & scripts
-    └── vite.config.js                # Vite build setup
-```
-
----
-
 ## ⚡ Installation & Getting Started
 
 ### Prerequisites
 * **Python**: `3.10` or higher
 * **Node.js**: `v18.0.0` or higher
-* **Package Managers**: `pip` and `npm`
 
----
+```bash
+# 1. Clone repository
+git clone https://github.com/Prakhar2628/Multimodal-AQI-Forecasting-Using-CNN-BiLSTM-Cross-Attention-with-Grad-CAM-SHAP.git
+cd Multimodal-AQI-Forecasting-Using-CNN-BiLSTM-Cross-Attention-with-Grad-CAM-SHAP
 
-### 🐍 1. Backend Setup
+# 2. Install dependencies
+pip install -r requirements.txt
 
-1. **Navigate to the backend folder**:
-   ```bash
-   cd backend
-   ```
+# 3. Start FastAPI Backend
+cd backend
+uvicorn app.main:app --reload --port 8000
 
-2. **Create and activate a virtual environment**:
-   * **Windows (PowerShell)**:
-     ```powershell
-     python -m venv venv
-     .\venv\Scripts\Activate.ps1
-     ```
-   * **Linux / macOS**:
-     ```bash
-     python3 -m venv venv
-     source venv/bin/activate
-     ```
-
-3. **Install dependencies**:
-   ```bash
-   pip install -r requirements.txt
-   ```
-
-4. **Launch the FastAPI Server**:
-   ```bash
-   uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
-   ```
-   * **Swagger API Docs**: Open [http://localhost:8000/docs](http://localhost:8000/docs)
-
----
-
-### ⚛️ 2. Frontend Setup
-
-1. **Navigate to the frontend folder**:
-   ```bash
-   cd ../frontend
-   ```
-
-2. **Install Node modules**:
-   ```bash
-   npm install
-   ```
-
-3. **Launch Vite Development Server**:
-   ```bash
-   npm run dev
-   ```
-   * **Web App URL**: Open [http://localhost:5173/](http://localhost:5173/)
-
----
-
-## 🔌 API Reference Summary
-
-| Method | Endpoint | Description |
-| :--- | :--- | :--- |
-| `POST` | `/api/predict` | Executes multimodal prediction given an uploaded sky image & 14-day pollutant payload |
-| `GET` | `/api/explain/{prediction_id}` | Computes Grad-CAM heatmaps, $3 \times 3$ grid scores, and SHAP feature impacts |
-| `GET` | `/api/forecast` | Returns 7-day predictive AQI trends and category forecasts for a given location |
-| `GET` | `/api/health` | Retrieves clinical health risk parameters and demographic advisories |
-| `GET` | `/api/cities` | Lists active monitoring cities and atmospheric metadata |
-| `GET` | `/api/weather` | Fetches live ambient meteorological metrics (temperature, humidity, pressure) |
-| `GET` | `/api/health-check` | Returns operational API status and version string |
-
----
-
-## 🎨 Theme & Design Token Specifications
-
-**AQI Multimodal AI** adheres to a strict dark obsidian cyberpunk aesthetic:
-
-```css
-:root {
-  --bg-dark: #07090e;         /* Deep Space Obsidian */
-  --card-bg: #0e131f;         /* Glassmorphic Panel Base */
-  --accent-neon: #00E5B0;      /* Primary Emerald Neon */
-  --accent-emerald: #10B981;   /* Secondary Mint Green */
-  --accent-dark-green: #064E3B;/* Subdued Emerald Backdrop */
-  --text-primary: #F8FAFC;    /* High Contrast Slate White */
-  --text-muted: #94A3B8;      /* Muted Sensor Gray */
-}
+# 4. Start React Frontend
+cd ../frontend
+npm install
+npm run dev
 ```
 
 ---
