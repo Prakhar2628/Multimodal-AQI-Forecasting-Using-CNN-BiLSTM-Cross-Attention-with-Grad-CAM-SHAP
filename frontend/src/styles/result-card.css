@@ -1,0 +1,123 @@
+/* styles/result-card.css */
+:root {
+  --ink: #12181b;
+  --paper: #f1f3f0;
+  --signal: #3fa7a0;
+  --mono: "IBM Plex Mono", ui-monospace, monospace;
+  --grotesk: "Space Grotesk", ui-sans-serif, sans-serif;
+  --body: "Inter", ui-sans-serif, sans-serif;
+}
+
+body {
+  background-color: var(--ink);
+  color: var(--paper);
+  font-family: var(--body);
+  margin: 0;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.result-card {
+  position: relative;
+  background: var(--paper);
+  border-radius: 4px;
+  padding: 2rem;
+  overflow: hidden;
+  isolation: isolate;
+  color: var(--ink);
+}
+
+.result-card__scrim {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle at top right, var(--band-color) 0%, transparent 70%);
+  opacity: 0.18;
+  filter: blur(var(--haze-blur));
+  z-index: -1;
+  transition: filter 400ms ease, opacity 400ms ease;
+}
+
+.result-card__eyebrow {
+  font-family: var(--mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--ink) 60%, transparent);
+}
+
+.result-card__category {
+  font-family: var(--grotesk);
+  font-size: clamp(1.75rem, 4vw, 2.75rem);
+  font-weight: 600;
+  color: var(--band-color);
+  margin: 0.25rem 0;
+}
+
+.result-card__confidence {
+  font-family: var(--mono);
+  font-size: 0.95rem;
+  color: var(--ink);
+}
+
+.haze-scale {
+  position: relative;
+  display: flex;
+  height: 8px;
+  border-radius: 999px;
+  overflow: visible;
+  margin: 1.5rem 0;
+}
+
+.haze-scale__segment {
+  flex: 1;
+  opacity: 0.35;
+  transition: opacity 300ms ease;
+}
+.haze-scale__segment.is-active {
+  opacity: 1;
+}
+.haze-scale__segment:first-child {
+  border-radius: 999px 0 0 999px;
+}
+.haze-scale__segment:last-child {
+  border-radius: 0 999px 999px 0;
+}
+
+.haze-scale__marker {
+  position: absolute;
+  top: -4px;
+  width: 2px;
+  height: 16px;
+  background: var(--ink);
+  transform: translateX(-50%);
+}
+
+.result-card__advisory {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 1rem;
+  font-family: var(--body);
+  margin: 1.5rem 0 0;
+}
+.result-card__advisory dt {
+  font-family: var(--mono);
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: color-mix(in srgb, var(--ink) 55%, transparent);
+  margin-bottom: 0.25rem;
+}
+.result-card__advisory dd {
+  margin: 0;
+  font-size: 0.95rem;
+  color: var(--ink);
+}
+
+.result-card__weather-note {
+  font-family: var(--mono);
+  font-size: 0.8rem;
+  color: color-mix(in srgb, var(--ink) 65%, transparent);
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid color-mix(in srgb, var(--ink) 12%, transparent);
+}

@@ -1,0 +1,7 @@
+[tool.pyrefly]
+# Point to backend's virtualenv Python interpreter
+python_interpreter = "venv/Scripts/python.exe"
+search_path = [".", "app"]
+
+# Exclude non-source directories
+exclude = ["venv", "__pycache__", ".git", "mlenv"]

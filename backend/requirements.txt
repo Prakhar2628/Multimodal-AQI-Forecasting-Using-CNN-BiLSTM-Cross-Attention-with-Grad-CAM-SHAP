@@ -1,0 +1,17 @@
+fastapi
+uvicorn[standard]
+python-multipart
+pydantic
+pydantic-settings
+sqlalchemy[asyncio]
+asyncpg
+alembic
+tensorflow-cpu
+numpy
+pandas
+scikit-learn
+joblib
+pillow
+requests
+python-dotenv
+gdown

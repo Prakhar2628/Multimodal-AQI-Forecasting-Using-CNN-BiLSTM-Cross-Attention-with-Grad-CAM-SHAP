@@ -1,0 +1,108 @@
+{
+  "classes": [
+    "Good",
+    "Satisfactory",
+    "Moderate",
+    "Poor",
+    "Very Poor",
+    "Severe"
+  ],
+  "aqi_breakpoints": [
+    0,
+    50,
+    100,
+    200,
+    300,
+    400,
+    5000
+  ],
+  "ts_feature_columns": [
+    "pm25",
+    "pm10",
+    "no2",
+    "so2",
+    "co",
+    "o3",
+    "pm25_roll_mean_7",
+    "pm25_roll_std_7",
+    "pm25_lag_1",
+    "pm25_lag_7",
+    "pm25_diff_1",
+    "pm10_roll_mean_7",
+    "pm10_roll_std_7",
+    "pm10_lag_1",
+    "pm10_lag_7",
+    "pm10_diff_1",
+    "no2_roll_mean_7",
+    "no2_roll_std_7",
+    "no2_lag_1",
+    "no2_lag_7",
+    "no2_diff_1",
+    "so2_roll_mean_7",
+    "so2_roll_std_7",
+    "so2_lag_1",
+    "so2_lag_7",
+    "so2_diff_1",
+    "co_roll_mean_7",
+    "co_roll_std_7",
+    "co_lag_1",
+    "co_lag_7",
+    "co_diff_1",
+    "o3_roll_mean_7",
+    "o3_roll_std_7",
+    "o3_lag_1",
+    "o3_lag_7",
+    "o3_diff_1",
+    "month_sin",
+    "month_cos",
+    "dow_sin",
+    "dow_cos",
+    "is_weekend"
+  ],
+  "seq_len": 14,
+  "img_size": 128,
+  "health_risk_map": {
+    "Good": {
+      "risk": "Minimal",
+      "asthma_risk": "Low",
+      "outdoor_exercise": "Safe",
+      "mask": "Not required",
+      "children": "No restrictions"
+    },
+    "Satisfactory": {
+      "risk": "Low",
+      "asthma_risk": "Low-Moderate",
+      "outdoor_exercise": "Generally safe",
+      "mask": "Not required",
+      "children": "No restrictions"
+    },
+    "Moderate": {
+      "risk": "Moderate",
+      "asthma_risk": "Moderate",
+      "outdoor_exercise": "Reduce prolonged exertion",
+      "mask": "Optional for sensitive groups",
+      "children": "Limit prolonged outdoor play"
+    },
+    "Poor": {
+      "risk": "High",
+      "asthma_risk": "High",
+      "outdoor_exercise": "Avoid prolonged/heavy exertion",
+      "mask": "N95 recommended outdoors",
+      "children": "Limit outdoor activity"
+    },
+    "Very Poor": {
+      "risk": "Very High",
+      "asthma_risk": "Very High",
+      "outdoor_exercise": "Avoid outdoor exercise",
+      "mask": "N95 strongly recommended",
+      "children": "Stay indoors where possible"
+    },
+    "Severe": {
+      "risk": "Severe / Emergency",
+      "asthma_risk": "Extreme",
+      "outdoor_exercise": "Avoid",
+      "mask": "N95 mandatory outdoors",
+      "children": "Stay indoors"
+    }
+  }
+}
