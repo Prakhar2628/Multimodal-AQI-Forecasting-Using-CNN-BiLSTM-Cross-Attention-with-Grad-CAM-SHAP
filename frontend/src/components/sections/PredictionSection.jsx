@@ -3,6 +3,7 @@ import { motion } from 'framer-motion';
 import { Upload, MapPin, Calendar, Activity, AlertTriangle, ShieldCheck, CheckCircle2, ImagePlus, ArrowRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { predictAQI } from '../../api';
+import { parsePollutantCSV } from '../../api/csvParser';
 
 const analyzeImageColor = (file) => {
   return new Promise((resolve) => {
@@ -69,54 +70,69 @@ export default function PredictionSection() {
     setError('');
     setIsPredicting(true);
     try {
-      // Analyze color tone to generate matching timeseries data for the multimodal network
-      const colorProfile = await analyzeImageColor(imageFile);
-      
-      let pm25Base = 38.0;
-      let pm10Base = 75.0;
-      let no2Base = 32.0;
-      let so2Base = 12.0;
-      let coBase = 1.5;
-      let o3Base = 28.0;
-      let aqiBase = 95.0;
-
-      if (colorProfile.isGreen) {
-        // Clean air readings matching green scene
-        pm25Base = 8.0;
-        pm10Base = 16.0;
-        no2Base = 12.0;
-        so2Base = 3.0;
-        coBase = 0.4;
-        o3Base = 18.0;
-        aqiBase = 22.0;
-      } else if (colorProfile.isGrey) {
-        // High smog readings matching gray/polluted scene
-        pm25Base = 185.0;
-        pm10Base = 265.0;
-        no2Base = 68.0;
-        so2Base = 24.0;
-        coBase = 3.2;
-        o3Base = 45.0;
-        aqiBase = 330.0;
+      let readingsToSend = null;
+      if (csvFile) {
+        try {
+          const parsed = await parsePollutantCSV(csvFile);
+          if (parsed && parsed.length === 14) {
+            readingsToSend = parsed;
+            console.log('[PredictionSection] Loaded user CSV timeseries readings:', parsed[0]);
+          }
+        } catch (csvErr) {
+          console.warn('[PredictionSection] Could not parse CSV, falling back to simulated series:', csvErr);
+        }
       }
 
-      const mockReadings = Array(14).fill(0).map((_, i) => {
-        const factor = 0.9 + Math.sin(i) * 0.1; // small daily variance
-        return {
-          date: new Date(Date.now() - (13 - i) * 86400000).toISOString().split('T')[0],
-          pm25: parseFloat((pm25Base * factor).toFixed(1)),
-          pm10: parseFloat((pm10Base * factor).toFixed(1)),
-          no2: parseFloat((no2Base * factor).toFixed(1)),
-          so2: parseFloat((so2Base * factor).toFixed(1)),
-          co: parseFloat((coBase * factor).toFixed(1)),
-          o3: parseFloat((o3Base * factor).toFixed(1)),
-          aqi: parseFloat((aqiBase * factor).toFixed(1))
-        };
-      });
+      if (!readingsToSend) {
+        // Analyze color tone to generate matching timeseries data for the multimodal network
+        const colorProfile = await analyzeImageColor(imageFile);
+        
+        let pm25Base = 38.0;
+        let pm10Base = 75.0;
+        let no2Base = 32.0;
+        let so2Base = 12.0;
+        let coBase = 1.5;
+        let o3Base = 28.0;
+        let aqiBase = 95.0;
+
+        if (colorProfile.isGreen) {
+          // Clean air readings matching green scene
+          pm25Base = 8.0;
+          pm10Base = 16.0;
+          no2Base = 12.0;
+          so2Base = 3.0;
+          coBase = 0.4;
+          o3Base = 18.0;
+          aqiBase = 22.0;
+        } else if (colorProfile.isGrey) {
+          // High smog readings matching gray/polluted scene
+          pm25Base = 185.0;
+          pm10Base = 265.0;
+          no2Base = 68.0;
+          so2Base = 24.0;
+          coBase = 3.2;
+          o3Base = 45.0;
+          aqiBase = 330.0;
+        }
+
+        readingsToSend = Array(14).fill(0).map((_, i) => {
+          const factor = 0.9 + Math.sin(i) * 0.1; // small daily variance
+          return {
+            date: new Date(Date.now() - (13 - i) * 86400000).toISOString().split('T')[0],
+            pm25: parseFloat((pm25Base * factor).toFixed(1)),
+            pm10: parseFloat((pm10Base * factor).toFixed(1)),
+            no2: parseFloat((no2Base * factor).toFixed(1)),
+            so2: parseFloat((so2Base * factor).toFixed(1)),
+            co: parseFloat((coBase * factor).toFixed(1)),
+            o3: parseFloat((o3Base * factor).toFixed(1)),
+            aqi: parseFloat((aqiBase * factor).toFixed(1))
+          };
+        });
+      }
 
       const fd = new FormData();
       fd.append('image', imageFile);
-      fd.append('readings', JSON.stringify(mockReadings));
+      fd.append('readings', JSON.stringify(readingsToSend));
       fd.append('city', city);
 
       const data = await predictAQI(fd);
@@ -138,7 +154,7 @@ export default function PredictionSection() {
 
   const currentCategory = result?.predicted_category || 'Moderate';
   const currentConfidence = result?.confidence ? (result.confidence * 100).toFixed(1) : '92.4';
-  const probs = result?.all_probabilities || { 'Good': 0.15, 'Moderate': 0.65, 'Unhealthy': 0.15, 'Severe': 0.05 };
+  const probs = result?.all_probabilities || { 'Good': 0.05, 'Satisfactory': 0.10, 'Moderate': 0.45, 'Poor': 0.25, 'Very Poor': 0.10, 'Severe': 0.05 };
 
   return (
     <section className="py-24 relative z-10" id="prediction">
@@ -218,10 +234,14 @@ export default function PredictionSection() {
                     >
                       <option className="bg-[#0e131f] text-white py-2" value="Delhi">Delhi</option>
                       <option className="bg-[#0e131f] text-white py-2" value="Mumbai">Mumbai</option>
-                      <option className="bg-[#0e131f] text-white py-2" value="Bangalore">Bangalore</option>
-                      <option className="bg-[#0e131f] text-white py-2" value="London">London</option>
-                      <option className="bg-[#0e131f] text-white py-2" value="New York">New York</option>
-                      <option className="bg-[#0e131f] text-white py-2" value="Tokyo">Tokyo</option>
+                      <option className="bg-[#0e131f] text-white py-2" value="Bengaluru">Bengaluru</option>
+                      <option className="bg-[#0e131f] text-white py-2" value="Kolkata">Kolkata</option>
+                      <option className="bg-[#0e131f] text-white py-2" value="Chennai">Chennai</option>
+                      <option className="bg-[#0e131f] text-white py-2" value="Hyderabad">Hyderabad</option>
+                      <option className="bg-[#0e131f] text-white py-2" value="Pune">Pune</option>
+                      <option className="bg-[#0e131f] text-white py-2" value="Ahmedabad">Ahmedabad</option>
+                      <option className="bg-[#0e131f] text-white py-2" value="Jaipur">Jaipur</option>
+                      <option className="bg-[#0e131f] text-white py-2" value="Lucknow">Lucknow</option>
                     </select>
                     <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none text-gray-400 text-xs">▼</div>
                   </div>

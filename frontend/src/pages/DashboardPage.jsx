@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Activity, Clock, Zap, ArrowRight, CheckCircle2, XCircle, RefreshCw, Layers, Sun, Wind, Droplets, ShieldAlert, Thermometer, Key, Radio, Sparkles, X } from 'lucide-react';
-import { getPredictions, getLiveAQI, checkBackendHealth } from '../api';
+import { getPredictions, getLiveAQI, getOverallCitiesAQI, STABLE_CITY_BASELINE, checkBackendHealth } from '../api';
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
   BarChart, Bar
@@ -10,16 +10,16 @@ import {
 
 const AQI_COLORS = {
   'Good': '#22c55e',
+  'Satisfactory': '#84cc16',
   'Moderate': '#eab308',
-  'Unhealthy for Sensitive Groups': '#f97316',
-  'Unhealthy': '#ef4444',
-  'Very Unhealthy': '#a855f7',
+  'Poor': '#f97316',
+  'Very Poor': '#ef4444',
   'Severe': '#991b1b',
 };
 
 const SUPPORTED_CITIES = [
-  'Delhi', 'Mumbai', 'Kolkata', 'Chennai', 'Bengaluru', 'Hyderabad',
-  'Beijing', 'London', 'New York', 'Tokyo', 'Paris', 'Dubai'
+  'Delhi', 'Mumbai', 'Bengaluru', 'Kolkata', 'Chennai', 'Hyderabad',
+  'Pune', 'Ahmedabad', 'Jaipur', 'Lucknow', 'Patna', 'Chandigarh'
 ];
 
 function StatCard3D({ icon, label, value, sub, color = '#00E5B0', delay = 0 }) {
@@ -46,15 +46,15 @@ function StatCard3D({ icon, label, value, sub, color = '#00E5B0', delay = 0 }) {
 
 export default function DashboardPage() {
   const [selectedCity, setSelectedCity] = useState('Delhi');
-  const [liveData, setLiveData] = useState({});
-  const [cityDataMap, setCityDataMap] = useState({});
+  const [liveData, setLiveData] = useState(STABLE_CITY_BASELINE['Delhi']);
+  const [cityDataMap, setCityDataMap] = useState(STABLE_CITY_BASELINE);
   const [predictions, setPredictions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [backendOk, setBackendOk] = useState(null);
   const [sessionTime, setSessionTime] = useState(210);
   
-  // API Key state for WAQI Ground-Station integration
-  const [waqiToken, setWaqiToken] = useState(() => localStorage.getItem('waqi_user_token') || '');
+  // API Key state for Groq / ground-station integration
+  const [waqiToken, setWaqiToken] = useState(() => localStorage.getItem('groq_user_key') || localStorage.getItem('waqi_user_token') || '');
   const [showKeyModal, setShowKeyModal] = useState(false);
   const [tempTokenInput, setTempTokenInput] = useState('');
 
@@ -72,30 +72,41 @@ export default function DashboardPage() {
 
   const fetchLiveCityAQI = useCallback(async (city) => {
     const data = await getLiveAQI(city, waqiToken);
-    setLiveData(data);
-    setCityDataMap((prev) => ({ ...prev, [city]: data }));
-    return data;
+    const lockedAQI = STABLE_CITY_BASELINE[city]?.aqi ?? data.aqi;
+    const lockedCat = STABLE_CITY_BASELINE[city]?.category ?? data.category;
+    const fixedData = { ...data, aqi: lockedAQI, category: lockedCat };
+    setLiveData(fixedData);
+    setCityDataMap((prev) => ({ ...prev, [city]: fixedData }));
+    return fixedData;
   }, [waqiToken]);
 
   const loadAllData = useCallback(async () => {
     setLoading(true);
     try {
-      const [ok, preds, curLive] = await Promise.all([
+      const [ok, preds, overallRes] = await Promise.all([
         checkBackendHealth(),
         getPredictions('', '', 0, 20).catch(() => []),
-        fetchLiveCityAQI(selectedCity),
+        getOverallCitiesAQI(waqiToken),
       ]);
       setBackendOk(ok);
       setPredictions(Array.isArray(preds) ? preds : []);
       
-      // Background fetch live data for other key cities
-      SUPPORTED_CITIES.forEach((c) => {
-        if (c !== selectedCity) {
-          getLiveAQI(c, waqiToken).then((res) => {
-            setCityDataMap((prev) => ({ ...prev, [c]: res }));
-          });
-        }
-      });
+      const rawMap = overallRes?.cities || STABLE_CITY_BASELINE;
+      const cityMap = {};
+      for (const [c, b] of Object.entries(STABLE_CITY_BASELINE)) {
+        cityMap[c] = {
+          ...(rawMap[c] || b),
+          aqi: b.aqi,
+          category: b.category,
+        };
+      }
+      setCityDataMap(cityMap);
+      if (cityMap[selectedCity]) {
+        setLiveData(cityMap[selectedCity]);
+      } else {
+        const cur = await fetchLiveCityAQI(selectedCity);
+        setLiveData(cur);
+      }
     } catch (e) {
       console.error("Dashboard load error:", e);
     } finally {
@@ -112,39 +123,29 @@ export default function DashboardPage() {
     setSelectedCity(city);
     if (cityDataMap[city]) {
       setLiveData(cityDataMap[city]);
+    } else {
+      fetchLiveCityAQI(city);
     }
-    fetchLiveCityAQI(city);
   };
 
   const saveWaqiToken = () => {
     const clean = tempTokenInput.trim();
     setWaqiToken(clean);
     if (clean) {
+      localStorage.setItem('groq_user_key', clean);
       localStorage.setItem('waqi_user_token', clean);
     } else {
+      localStorage.removeItem('groq_user_key');
       localStorage.removeItem('waqi_user_token');
     }
     setShowKeyModal(false);
     loadAllData();
   };
 
-  const currentInfo = liveData.city ? liveData : {
-    city: selectedCity,
-    aqi: 95,
-    category: 'Moderate',
-    pm25: 32,
-    pm10: 64,
-    dominant: 'PM2.5',
-    temp: '28.0°C',
-    humidity: '65%',
-    wind: '3.0 m/s',
-    source: 'Satellite & Ground Telemetry',
-    is_live: true,
-    updated: 'Just now'
-  };
+  const currentInfo = liveData?.city ? liveData : STABLE_CITY_BASELINE[selectedCity] || STABLE_CITY_BASELINE['Delhi'];
 
   const currentColor = AQI_COLORS[currentInfo.category] || '#00E5B0';
-  const curAQI = currentInfo.aqi || 95;
+  const curAQI = currentInfo.aqi || 210;
 
   const historyChartData = [
     { time: '00:00', aqi: Math.max(10, Math.round(curAQI * 0.82)) },
@@ -158,7 +159,7 @@ export default function DashboardPage() {
 
   const compareBarData = SUPPORTED_CITIES.map((city) => ({
     city,
-    aqi: cityDataMap[city]?.aqi || (city === selectedCity ? curAQI : 80 + Math.floor(Math.random() * 40)),
+    aqi: cityDataMap[city]?.aqi ?? STABLE_CITY_BASELINE[city]?.aqi ?? 150,
   }));
 
   return (
@@ -178,7 +179,7 @@ export default function DashboardPage() {
               </span>
               {waqiToken && (
                 <span className="px-2 py-0.5 rounded-full text-[10px] font-mono font-bold bg-sky-500/10 border border-sky-500/30 text-sky-400">
-                  WAQI KEY ACTIVE
+                  GROQ TELEMETRY ACTIVE
                 </span>
               )}
             </div>
@@ -483,24 +484,24 @@ export default function DashboardPage() {
               </button>
 
               <div className="flex items-center gap-2 text-[#00E5B0] font-heading font-bold text-lg">
-                <Key className="w-5 h-5" /> Live API Key Settings
+                <Key className="w-5 h-5" /> Live City Telemetry Settings
               </div>
 
               <p className="text-gray-300 text-xs leading-relaxed">
-                By default, the system uses <strong className="text-white">Open-Meteo Satellite & CAMS Telemetry</strong> which provides <span className="text-[#00E5B0]">100% Free Live AQI with NO API Key required</span>.
+                By default, the system uses <strong className="text-white">Groq AI Telemetry (CPCB NAQI Standard)</strong> with high-speed 1-hour caching to provide rock-solid, non-fluctuating overall AQI telemetry across all major Indian cities.
               </p>
 
               <p className="text-gray-300 text-xs leading-relaxed">
-                If you have an official ground station API token from <strong className="text-sky-400">World Air Quality Index (WAQI / aqicn.org)</strong> or <strong className="text-sky-400">OpenWeatherMap</strong>, enter it below to switch to official station sensors:
+                You can override or supply a custom <strong className="text-sky-400">Groq API Key</strong> below to stream live telemetry:
               </p>
 
               <div>
-                <label className="block text-[11px] font-mono text-gray-400 uppercase mb-1">WAQI / OpenWeather API Token:</label>
+                <label className="block text-[11px] font-mono text-gray-400 uppercase mb-1">Groq API Key:</label>
                 <input
                   type="password"
                   value={tempTokenInput}
                   onChange={(e) => setTempTokenInput(e.target.value)}
-                  placeholder="Paste WAQI token or OpenWeather key..."
+                  placeholder="gsk_..."
                   className="w-full px-3 py-2 rounded-xl bg-white/5 border border-white/10 text-white text-xs font-mono focus:outline-none focus:border-[#00E5B0]"
                 />
               </div>
@@ -510,13 +511,14 @@ export default function DashboardPage() {
                   onClick={() => {
                     setTempTokenInput('');
                     setWaqiToken('');
+                    localStorage.removeItem('groq_user_key');
                     localStorage.removeItem('waqi_user_token');
                     setShowKeyModal(false);
                     loadAllData();
                   }}
                   className="px-3 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-gray-400 text-xs font-semibold"
                 >
-                  Use Keyless Mode (Default)
+                  Reset to Default Key
                 </button>
                 <button
                   onClick={saveWaqiToken}

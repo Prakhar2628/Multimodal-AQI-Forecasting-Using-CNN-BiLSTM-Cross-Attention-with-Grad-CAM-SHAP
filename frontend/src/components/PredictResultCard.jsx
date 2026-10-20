@@ -2,12 +2,12 @@ import { useMemo } from "react";
 import "../styles/result-card.css";
 
 const SEVERITY = [
-  { key: "Good", color: "#4CAF6D" },
-  { key: "Moderate", color: "#D9A441" },
-  { key: "Unhealthy for Sensitive Groups", color: "#E07A3D" },
-  { key: "Unhealthy", color: "#C2483D" },
-  { key: "Very Unhealthy", color: "#7B4B8A" },
-  { key: "Severe", color: "#5C2331" },
+  { key: "Good", color: "#22c55e", range: "0–50" },
+  { key: "Satisfactory", color: "#84cc16", range: "51–100" },
+  { key: "Moderate", color: "#eab308", range: "101–200" },
+  { key: "Poor", color: "#f97316", range: "201–300" },
+  { key: "Very Poor", color: "#ef4444", range: "301–400" },
+  { key: "Severe", color: "#991b1b", range: "401–500+" },
 ];
 
 export default function PredictResultCard({ result }) {

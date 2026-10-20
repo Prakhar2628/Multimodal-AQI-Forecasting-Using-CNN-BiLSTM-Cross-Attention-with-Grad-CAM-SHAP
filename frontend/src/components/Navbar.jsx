@@ -12,7 +12,7 @@ const navLinks = [
   { name: 'Explainability Engine', path: '/explain', icon: <Brain className="w-4 h-4" /> },
 ];
 
-const SEARCH_CITIES = ['Delhi', 'Mumbai', 'Kolkata', 'Chennai', 'Bengaluru', 'Hyderabad', 'Beijing', 'London', 'Tokyo', 'New York'];
+const SEARCH_CITIES = ['Delhi', 'Mumbai', 'Bengaluru', 'Kolkata', 'Chennai', 'Hyderabad', 'Pune', 'Ahmedabad', 'Jaipur', 'Lucknow', 'Patna', 'Chandigarh'];
 
 export default function Navbar({ onToggleTimeline, timelineOpen }) {
   const location = useLocation();

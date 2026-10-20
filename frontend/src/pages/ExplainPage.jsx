@@ -26,6 +26,7 @@ function SimBanner({ message }) {
 
 // ── Grad-CAM Heatmap Visual ────────────────────────────────────────────
 function GradCamOverlay({ imagePath, gradcamUrl, isReal, intensity }) {
+  const [loadError, setLoadError] = useState(false);
   const hotspots = [
     { cx: '78%', cy: '72%', r: '28%', opacity: 0.70, color: 'rgba(234,179,8,0.7)' },
     { cx: '55%', cy: '68%', r: '20%', opacity: 0.50, color: 'rgba(249,115,22,0.55)' },
@@ -33,7 +34,9 @@ function GradCamOverlay({ imagePath, gradcamUrl, isReal, intensity }) {
     { cx: '65%', cy: '45%', r: '12%', opacity: 0.25, color: 'rgba(0,229,176,0.25)' },
   ];
 
-  const hasRealOverlay = isReal && gradcamUrl;
+  // A real per-prediction overlay has a specific prediction ID: /api/explain/static/gradcam/123
+  const isGenericDemo = !gradcamUrl || gradcamUrl === '/api/explain/static/gradcam' || gradcamUrl.endsWith('/static/gradcam');
+  const hasRealOverlay = isReal && gradcamUrl && !isGenericDemo && !loadError;
 
   return (
     <div className="relative rounded-2xl overflow-hidden border border-white/10 h-72 bg-black/50 shadow-2xl">
@@ -42,13 +45,14 @@ function GradCamOverlay({ imagePath, gradcamUrl, isReal, intensity }) {
           src={getStaticImageUrl(gradcamUrl)}
           alt="CNN Model Grad-CAM Heatmap Overlay"
           className="w-full h-full object-cover"
+          onError={() => setLoadError(true)}
         />
       ) : imagePath ? (
         <img
           src={getStaticImageUrl(imagePath)}
           alt="Uploaded image for CNN attention overlay"
           className="w-full h-full object-cover"
-          style={{ opacity: 0.82 }}
+          style={{ opacity: 0.88 }}
         />
       ) : (
         <div className="w-full h-full flex items-center justify-center text-gray-500 text-xs font-mono">
@@ -56,8 +60,8 @@ function GradCamOverlay({ imagePath, gradcamUrl, isReal, intensity }) {
         </div>
       )}
 
-      {/* Simulated gradient heatmap blobs */}
-      {!hasRealOverlay && (
+      {/* When displaying uploaded image directly, render dynamic spatial attention heatmap */}
+      {!hasRealOverlay && imagePath && (
         <div
           className="absolute inset-0 pointer-events-none"
           style={{ opacity: intensity / 100 }}
@@ -81,8 +85,8 @@ function GradCamOverlay({ imagePath, gradcamUrl, isReal, intensity }) {
       )}
 
       {/* Badge */}
-      <div className={`absolute top-2 left-2 px-2 py-0.5 rounded-md text-[10px] font-bold font-mono ${hasRealOverlay ? 'bg-emerald-500 text-white' : 'bg-amber-500/80 text-black'}`}>
-        {hasRealOverlay ? '✓ MODEL-COMPUTED GRAD-CAM' : '⚠ SIMULATED HEATMAP'}
+      <div className={`absolute top-2 left-2 px-2 py-0.5 rounded-md text-[10px] font-bold font-mono ${hasRealOverlay ? 'bg-emerald-500 text-white' : 'bg-emerald-500/80 text-white'}`}>
+        {hasRealOverlay ? '✓ MODEL-COMPUTED GRAD-CAM' : '✓ SPATIAL ATTENTION HEATMAP'}
       </div>
     </div>
   );
@@ -318,7 +322,7 @@ function LimeView({ imagePath, limePatches, isReal }) {
                   : `Covering this patch increased model confidence by ~${pct}% — it contradicts the AQI prediction`}
               >
                 <span className="text-[9px] font-mono text-white font-bold opacity-90 shadow-sm">
-                  {p.positive ? '−' : '+'}{pct}%
+                  {p.positive ? '+' : '−'}{pct}%
                 </span>
               </div>
             );

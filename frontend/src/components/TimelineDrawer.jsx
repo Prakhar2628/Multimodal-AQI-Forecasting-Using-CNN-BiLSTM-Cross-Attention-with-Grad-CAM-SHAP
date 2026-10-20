@@ -5,10 +5,10 @@ import { getStaticImageUrl } from '../api';
 
 const AQI_COLORS = {
   'Good': '#22c55e',
+  'Satisfactory': '#84cc16',
   'Moderate': '#eab308',
-  'Unhealthy for Sensitive Groups': '#f97316',
-  'Unhealthy': '#ef4444',
-  'Very Unhealthy': '#a855f7',
+  'Poor': '#f97316',
+  'Very Poor': '#ef4444',
   'Severe': '#991b1b',
 };
 

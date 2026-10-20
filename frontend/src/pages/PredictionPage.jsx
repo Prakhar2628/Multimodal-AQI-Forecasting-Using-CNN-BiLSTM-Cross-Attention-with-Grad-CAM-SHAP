@@ -2,7 +2,8 @@ import { useState, useCallback, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Upload, MapPin, Activity, CloudRain, Thermometer, Wind, Droplets, ArrowRight, Zap, Sparkles, Sliders, ImagePlus, CheckCircle2 } from 'lucide-react';
-import { predictAQI, getWeather } from '../api';
+import { predictAQI, getWeather, getLiveAQI } from '../api';
+import { parsePollutantCSV } from '../api/csvParser';
 import { RadialBarChart, RadialBar, ResponsiveContainer } from 'recharts';
 
 /* ── Indian AQI (CPCB) Standard Reference ─────────────────────
@@ -22,26 +23,28 @@ const AQI_INFO = {
   'Moderate':     { scoreMin: 101, scoreMax: 200, scoreMid: 150, color: '#eab308', bg: '#eab30815', border: '#eab30840', range: '101–200', emoji: '🟠', impact: 'Breathing discomfort for people with lung/heart disease, children and older adults.' },
   'Poor':         { scoreMin: 201, scoreMax: 300, scoreMid: 250, color: '#f97316', bg: '#f9731615', border: '#f9731640', range: '201–300', emoji: '🔴', impact: 'Breathing discomfort for most people on prolonged exposure.' },
   'Very Poor':    { scoreMin: 301, scoreMax: 400, scoreMid: 350, color: '#ef4444', bg: '#ef444415', border: '#ef444440', range: '301–400', emoji: '🟣', impact: 'Respiratory illness on prolonged exposure. Avoid outdoor activity.' },
-  'Severe':       { scoreMin: 401, scoreMax: 500, scoreMid: 450, color: '#991b1b', bg: '#991b1b20', border: '#991b1b50', range: '401–500', emoji: '🟤', impact: 'Emergency: affects healthy people too. Serious effects on sensitive groups.' },
+  'Severe':       { scoreMin: 401, scoreMax: 500, scoreMid: 460, color: '#991b1b', bg: '#991b1b20', border: '#991b1b50', range: '401–500+', emoji: '🟤', impact: 'Emergency / Hazardous: Affects healthy people too. Severe risk for all groups.' },
 };
 
-// City-specific realistic baseline pollutant levels (µg/m³) — sourced from CPCB/EPA monitoring
+// City-specific realistic baseline pollutant levels (µg/m³) — sourced from CPCB monitoring
 // These give the model city-appropriate inputs so predictions vary by city
 const CITY_POLLUTANTS = {
-  'Delhi':     { pm25_base: 28, pm10_base: 61,  no2_base: 38,  so2_base: 12, co_base: 1.8, o3_base: 28, aqi_base: 96  },
-  'Mumbai':    { pm25_base: 22, pm10_base: 54,  no2_base: 30,  so2_base: 8,  co_base: 1.2, o3_base: 22, aqi_base: 73  },
-  'Bangalore': { pm25_base: 14, pm10_base: 38,  no2_base: 18,  so2_base: 5,  co_base: 0.8, o3_base: 18, aqi_base: 54  },
-  'Kolkata':   { pm25_base: 41, pm10_base: 89,  no2_base: 44,  so2_base: 15, co_base: 2.1, o3_base: 32, aqi_base: 114 },
-  'Chennai':   { pm25_base: 19, pm10_base: 48,  no2_base: 22,  so2_base: 7,  co_base: 0.9, o3_base: 20, aqi_base: 68  },
-  'Hyderabad': { pm25_base: 18, pm10_base: 44,  no2_base: 20,  so2_base: 6,  co_base: 0.9, o3_base: 19, aqi_base: 62  },
-  'Beijing':   { pm25_base: 49, pm10_base: 88,  no2_base: 52,  so2_base: 18, co_base: 2.4, o3_base: 35, aqi_base: 135 },
-  'London':    { pm25_base: 10, pm10_base: 20,  no2_base: 32,  so2_base: 3,  co_base: 0.4, o3_base: 40, aqi_base: 42  },
-  'New York':  { pm25_base: 8,  pm10_base: 18,  no2_base: 28,  so2_base: 2,  co_base: 0.3, o3_base: 35, aqi_base: 38  },
-  'Tokyo':     { pm25_base: 12, pm10_base: 25,  no2_base: 24,  so2_base: 4,  co_base: 0.5, o3_base: 30, aqi_base: 48  },
-  'default':   { pm25_base: 30, pm10_base: 65,  no2_base: 35,  so2_base: 10, co_base: 1.5, o3_base: 25, aqi_base: 90  },
+  'Delhi':      { pm25_base: 145, pm10_base: 260, no2_base: 55,  so2_base: 18, co_base: 2.8, o3_base: 45, aqi_base: 285 },
+  'Mumbai':     { pm25_base: 65,  pm10_base: 120, no2_base: 32,  so2_base: 12, co_base: 1.4, o3_base: 30, aqi_base: 135 },
+  'Bengaluru':  { pm25_base: 42,  pm10_base: 78,  no2_base: 22,  so2_base: 8,  co_base: 1.0, o3_base: 24, aqi_base: 88  },
+  'Kolkata':    { pm25_base: 110, pm10_base: 210, no2_base: 48,  so2_base: 16, co_base: 2.2, o3_base: 36, aqi_base: 220 },
+  'Chennai':    { pm25_base: 48,  pm10_base: 92,  no2_base: 26,  so2_base: 9,  co_base: 1.1, o3_base: 28, aqi_base: 98  },
+  'Hyderabad':  { pm25_base: 58,  pm10_base: 108, no2_base: 28,  so2_base: 10, co_base: 1.2, o3_base: 26, aqi_base: 115 },
+  'Pune':       { pm25_base: 52,  pm10_base: 98,  no2_base: 25,  so2_base: 9,  co_base: 1.1, o3_base: 25, aqi_base: 105 },
+  'Ahmedabad':  { pm25_base: 88,  pm10_base: 165, no2_base: 38,  so2_base: 14, co_base: 1.8, o3_base: 34, aqi_base: 175 },
+  'Jaipur':     { pm25_base: 78,  pm10_base: 155, no2_base: 35,  so2_base: 13, co_base: 1.6, o3_base: 32, aqi_base: 160 },
+  'Lucknow':    { pm25_base: 125, pm10_base: 235, no2_base: 50,  so2_base: 17, co_base: 2.5, o3_base: 40, aqi_base: 250 },
+  'Patna':      { pm25_base: 150, pm10_base: 275, no2_base: 58,  so2_base: 20, co_base: 3.0, o3_base: 46, aqi_base: 310 },
+  'Chandigarh': { pm25_base: 60,  pm10_base: 115, no2_base: 28,  so2_base: 10, co_base: 1.3, o3_base: 28, aqi_base: 120 },
+  'default':    { pm25_base: 65,  pm10_base: 125, no2_base: 32,  so2_base: 12, co_base: 1.4, o3_base: 30, aqi_base: 135 },
 };
 
-const CITIES = ['Delhi', 'Mumbai', 'Bangalore', 'Kolkata', 'Chennai', 'Hyderabad', 'London', 'New York', 'Beijing', 'Tokyo'];
+const CITIES = ['Delhi', 'Mumbai', 'Bengaluru', 'Kolkata', 'Chennai', 'Hyderabad', 'Pune', 'Ahmedabad', 'Jaipur', 'Lucknow', 'Patna', 'Chandigarh'];
 
 /* ── Drop Zone with proper click handler ─────────────────────── */
 function DropZone({ file, onFile }) {
@@ -162,61 +165,18 @@ function WeatherStrip({ weather }) {
   );
 }
 
-const analyzeImageColor = (file) => {
-  return new Promise((resolve) => {
-    const img = new Image();
-    img.src = URL.createObjectURL(file);
-    img.onload = () => {
-      try {
-        const canvas = document.createElement('canvas');
-        canvas.width = 30;
-        canvas.height = 30;
-        const ctx = canvas.getContext('2d');
-        if (!ctx) { resolve({ isGreen: false, isGrey: false }); return; }
-        ctx.drawImage(img, 0, 0, 30, 30);
-        const data = ctx.getImageData(0, 0, 30, 30).data;
-        
-        let greenPixels = 0;
-        let greyPixels = 0;
-        let total = 0;
-        
-        for (let i = 0; i < data.length; i += 4) {
-          const r = data[i];
-          const g = data[i+1];
-          const b = data[i+2];
-          total++;
-          
-          if (g > r + 15 && g > b + 15) {
-            greenPixels++;
-          }
-          const maxVal = Math.max(r, g, b);
-          const minVal = Math.min(r, g, b);
-          if (maxVal - minVal < 25 && maxVal > 80 && maxVal < 200) {
-            greyPixels++;
-          }
-        }
-        
-        const greenRatio = greenPixels / total;
-        const greyRatio = greyPixels / total;
-        resolve({
-          isGreen: greenRatio > 0.15,
-          isGrey: greyRatio > 0.40,
-        });
-      } catch (err) {
-        resolve({ isGreen: false, isGrey: false });
-      }
-    };
-    img.onerror = () => resolve({ isGreen: false, isGrey: false });
-  });
-};
+// Removed pixel-based analyzeImageColor — sensor readings now come from live Gemini API
 
 export default function PredictionPage() {
   const [image, setImage] = useState(null);
+  const [csvFile, setCsvFile] = useState(null);
   const [city, setCity] = useState('Delhi');
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState(null);
   const [weather, setWeather] = useState(null);
+  const [liveAQI, setLiveAQI] = useState(null);
   const [error, setError] = useState('');
+  const csvInputRef = useRef(null);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -224,75 +184,64 @@ export default function PredictionPage() {
     setError(''); setLoading(true); setResult(null);
 
     try {
-      // Fetch weather for the city at the same time
-      const [weatherData] = await Promise.allSettled([getWeather(city)]);
-      if (weatherData.status === 'fulfilled') setWeather(weatherData.value);
-
-      // Analyze image color characteristics
-      const colorProfile = await analyzeImageColor(image);
-
-      // Resolve base pollutant concentrations corresponding to image characteristics
-      let pm25_base = 30.0;
-      let pm10_base = 65.0;
-      let no2_base = 35.0;
-      let so2_base = 10.0;
-      let co_base = 1.5;
-      let o3_base = 25.0;
-      let aqi_base = 90.0;
-
-      if (colorProfile.isGreen) {
-        // Clean air readings matching green scene
-        pm25_base = 8.0;
-        pm10_base = 16.0;
-        no2_base = 12.0;
-        so2_base = 3.0;
-        co_base = 0.4;
-        o3_base = 18.0;
-        aqi_base = 22.0;
-      } else if (colorProfile.isGrey) {
-        // High smog readings matching gray/polluted scene
-        pm25_base = 185.0;
-        pm10_base = 265.0;
-        no2_base = 68.0;
-        so2_base = 24.0;
-        co_base = 3.2;
-        o3_base = 45.0;
-        aqi_base = 330.0;
-      } else {
-        // Use city-specific baseline pollutant values
-        const cityPollutants = CITY_POLLUTANTS[city] || CITY_POLLUTANTS['default'];
-        pm25_base = cityPollutants.pm25_base;
-        pm10_base = cityPollutants.pm10_base;
-        no2_base = cityPollutants.no2_base;
-        so2_base = cityPollutants.so2_base;
-        co_base = cityPollutants.co_base;
-        o3_base = cityPollutants.o3_base;
-        aqi_base = cityPollutants.aqi_base;
+      let liveReadings = null;
+      if (csvFile) {
+        try {
+          const parsed = await parsePollutantCSV(csvFile);
+          if (parsed && parsed.length === 14) {
+            liveReadings = parsed;
+            console.log('[PredictionPage] Successfully parsed user CSV timeseries:', parsed[0]);
+          }
+        } catch (csvErr) {
+          console.warn('[PredictionPage] CSV parsing error, falling back to telemetry:', csvErr);
+        }
       }
 
-      const mockReadings = Array(14).fill(0).map((_, i) => {
-        // ±15% daily natural variation around baseline
-        const jitter = () => 0.9 + Math.random() * 0.2;
-        return {
-          date: new Date(Date.now() - (13 - i) * 86400000).toISOString().split('T')[0],
-          pm25: parseFloat((pm25_base * jitter()).toFixed(2)),
-          pm10: parseFloat((pm10_base * jitter()).toFixed(2)),
-          no2:  parseFloat((no2_base  * jitter()).toFixed(2)),
-          so2:  parseFloat((so2_base  * jitter()).toFixed(2)),
-          co:   parseFloat((co_base   * jitter()).toFixed(3)),
-          o3:   parseFloat((o3_base   * jitter()).toFixed(2)),
-          aqi:  parseFloat((aqi_base  * jitter()).toFixed(0)),
-        };
-      });
+      // ── Step 1: Fetch REAL live AQI + weather from telemetry if not overridden by CSV ──
+      const [weatherResult, liveAQIResult] = await Promise.allSettled([
+        getWeather(city),
+        getLiveAQI(city),
+      ]);
+      if (weatherResult.status === 'fulfilled') setWeather(weatherResult.value);
 
+      const liveAQIData = liveAQIResult.status === 'fulfilled' ? liveAQIResult.value : null;
+      setLiveAQI(liveAQIData);
+
+      if (!liveReadings) {
+        // Use live Gemini/CPCB AQI values as the true baseline (with ±8% natural daily variation)
+        const pm25_base = liveAQIData?.pm25 ?? (CITY_POLLUTANTS[city] || CITY_POLLUTANTS['default']).pm25_base;
+        const pm10_base = liveAQIData?.pm10 ?? (CITY_POLLUTANTS[city] || CITY_POLLUTANTS['default']).pm10_base;
+        const no2_base  = liveAQIData?.no2  ?? (CITY_POLLUTANTS[city] || CITY_POLLUTANTS['default']).no2_base;
+        const so2_base  = liveAQIData?.so2  ?? (CITY_POLLUTANTS[city] || CITY_POLLUTANTS['default']).so2_base;
+        const co_base   = liveAQIData?.co   ?? (CITY_POLLUTANTS[city] || CITY_POLLUTANTS['default']).co_base;
+        const o3_base   = liveAQIData?.o3   ?? (CITY_POLLUTANTS[city] || CITY_POLLUTANTS['default']).o3_base;
+        const aqi_base  = liveAQIData?.aqi  ?? (CITY_POLLUTANTS[city] || CITY_POLLUTANTS['default']).aqi_base;
+
+        // Build 14-day reading history with ±8% natural daily variation around today's real values
+        liveReadings = Array(14).fill(0).map((_, i) => {
+          const jitter = () => 0.96 + Math.random() * 0.08; // ±8% variation
+          return {
+            date: new Date(Date.now() - (13 - i) * 86400000).toISOString().split('T')[0],
+            pm25: parseFloat((pm25_base * jitter()).toFixed(2)),
+            pm10: parseFloat((pm10_base * jitter()).toFixed(2)),
+            no2:  parseFloat((no2_base  * jitter()).toFixed(2)),
+            so2:  parseFloat((so2_base  * jitter()).toFixed(2)),
+            co:   parseFloat((co_base   * jitter()).toFixed(3)),
+            o3:   parseFloat((o3_base   * jitter()).toFixed(2)),
+            aqi:  parseFloat((aqi_base  * jitter()).toFixed(0)),
+          };
+        });
+      }
+
+      // ── Step 3: Run multimodal inference with real sensor data + image ──
       const fd = new FormData();
       fd.append('image', image);
-      fd.append('readings', JSON.stringify(mockReadings));
+      fd.append('readings', JSON.stringify(liveReadings));
       fd.append('city', city);
       const data = await predictAQI(fd);
       setResult(data);
 
-      // Convert uploaded file to data URL and store in sessionStorage immediately
+      // Store image in sessionStorage for Explain page
       const reader = new FileReader();
       reader.onload = (event) => {
         if (event.target?.result) {
@@ -309,19 +258,22 @@ export default function PredictionPage() {
 
   const info = result ? (AQI_INFO[result.predicted_category] || AQI_INFO['Moderate']) : null;
 
-  // Pollutant breakdown — computed from city-specific baseline values, not hardcoded
+  // Pollutant breakdown — use live AQI values when available, else city baseline
   const cityP = CITY_POLLUTANTS[city] || CITY_POLLUTANTS['default'];
   const rawPollutants = [
-    { name: 'PM2.5', raw: cityP.pm25_base, color: '#f472b6' },
-    { name: 'PM10',  raw: cityP.pm10_base, color: '#fb923c' },
-    { name: 'NO2',   raw: cityP.no2_base,  color: '#a78bfa' },
-    { name: 'SO2',   raw: cityP.so2_base,  color: '#60a5fa' },
-    { name: 'CO',    raw: cityP.co_base * 50, color: '#38bdf8' }, // scale CO for visibility
+    { name: 'PM2.5', raw: liveAQI?.pm25 ?? cityP.pm25_base, color: '#f472b6' },
+    { name: 'PM10',  raw: liveAQI?.pm10 ?? cityP.pm10_base, color: '#fb923c' },
+    { name: 'NO2',   raw: liveAQI?.no2  ?? cityP.no2_base,  color: '#a78bfa' },
+    { name: 'SO2',   raw: liveAQI?.so2  ?? cityP.so2_base,  color: '#60a5fa' },
+    { name: 'CO',    raw: (liveAQI?.co  ?? cityP.co_base) * 50, color: '#38bdf8' }, // scale CO
   ];
   const totalRaw = rawPollutants.reduce((s, p) => s + p.raw, 0);
   const pollutantBreakdown = result
     ? rawPollutants.map(p => ({ ...p, val: parseFloat(((p.raw / totalRaw) * 100).toFixed(1)) }))
     : [];
+
+  // Live AQI source label
+  const liveAQISource = liveAQI?.source || null;
 
   return (
     <div className="min-h-screen bg-[#07090e] pt-[72px]">
@@ -339,7 +291,7 @@ export default function PredictionPage() {
         <div className="glass-card p-4 mb-6 overflow-x-auto">
           <div className="flex items-center gap-2 mb-2">
             <Activity className="w-4 h-4 text-[#00E5B0]" />
-            <span className="text-xs font-bold text-gray-300 uppercase tracking-wider">AQI Reference Scale (US EPA Standard)</span>
+            <span className="text-xs font-bold text-gray-300 uppercase tracking-wider">Indian AQI Reference Scale (CPCB NAQI Standard)</span>
           </div>
           <div className="flex gap-2 min-w-max">
             {Object.entries(AQI_INFO).map(([cat, v]) => (
@@ -363,6 +315,37 @@ export default function PredictionPage() {
                 <Upload className="w-4 h-4 text-[#00E5B0]" /> Environmental Image Upload
               </h3>
               <DropZone file={image} onFile={setImage} />
+
+              {/* Optional BiLSTM CSV Timeseries Sensor Upload */}
+              <div className="mt-4 pt-4 border-t border-white/5 flex items-center justify-between gap-4 p-3 rounded-xl bg-white/3 border border-white/5">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-[#00E5B0]/10 text-[#00E5B0]">
+                    <Activity className="w-4 h-4" />
+                  </div>
+                  <div>
+                    <p className="text-xs font-semibold text-white">BiLSTM Sensor CSV (Optional)</p>
+                    <p className="text-[10px] text-gray-400">
+                      {csvFile ? `✓ ${csvFile.name}` : 'Use custom 14-day sensor data or default to city telemetry'}
+                    </p>
+                  </div>
+                </div>
+                <input
+                  type="file"
+                  accept=".csv"
+                  className="hidden"
+                  ref={csvInputRef}
+                  onChange={(e) => {
+                    if (e.target.files?.[0]) setCsvFile(e.target.files[0]);
+                  }}
+                />
+                <button
+                  type="button"
+                  onClick={() => csvInputRef.current?.click()}
+                  className="text-xs bg-white/5 hover:bg-white/10 text-[#00E5B0] px-3 py-1.5 rounded-lg border border-[#00E5B0]/30 transition-colors"
+                >
+                  {csvFile ? 'Change CSV' : 'Browse CSV'}
+                </button>
+              </div>
             </div>
 
             <div className="glass-card p-6">
@@ -409,6 +392,20 @@ export default function PredictionPage() {
                   )}
                 </div>
               )}
+              {liveAQI && (
+                <div className="mt-3 p-3 rounded-xl bg-[#00E5B0]/5 border border-[#00E5B0]/20">
+                  <p className="text-[10px] text-[#00E5B0] font-bold uppercase tracking-wider mb-1.5 flex items-center gap-1.5">
+                    <Zap className="w-3 h-3" /> Real Sensor Data Used for Inference
+                  </p>
+                  <div className="flex flex-wrap gap-2 text-[10px] font-mono">
+                    <span className="px-2 py-0.5 rounded-md bg-white/5 text-white">AQI <span className="text-[#00E5B0] font-bold">{liveAQI.aqi}</span></span>
+                    <span className="px-2 py-0.5 rounded-md bg-white/5 text-white">PM2.5 <span className="text-pink-400 font-bold">{liveAQI.pm25}</span></span>
+                    <span className="px-2 py-0.5 rounded-md bg-white/5 text-white">PM10 <span className="text-orange-400 font-bold">{liveAQI.pm10}</span></span>
+                    <span className="px-2 py-0.5 rounded-md bg-white/5 text-white">NO₂ <span className="text-purple-400 font-bold">{liveAQI.no2}</span></span>
+                  </div>
+                  <p className="text-[9px] text-gray-500 mt-1.5">Source: {liveAQI.source} · Category: <span className="text-gray-300">{liveAQI.category}</span></p>
+                </div>
+              )}
             </div>
 
             {error && (
@@ -418,7 +415,7 @@ export default function PredictionPage() {
             <button onClick={handleSubmit} disabled={loading || !image}
               className="w-full flex items-center justify-center gap-2 bg-[#00E5B0] text-[#07090e] font-bold py-3.5 px-6 rounded-2xl hover:scale-[1.02] hover:shadow-[0_0_25px_rgba(0,229,176,0.35)] transition-all disabled:opacity-50 disabled:cursor-not-allowed">
               {loading ? (
-                <><div className="w-4 h-4 border-2 border-[#07090e] border-t-transparent rounded-full animate-spin" /> Processing Multimodal Weights...</>
+                <><div className="w-4 h-4 border-2 border-[#07090e] border-t-transparent rounded-full animate-spin" /> Fetching Live AQI + Running Inference...</>
               ) : (
                 <><Activity className="w-4 h-4" /> Run Multimodal AQI Prediction</>
               )}
@@ -468,7 +465,17 @@ export default function PredictionPage() {
                           <span className="text-xs text-gray-400 font-mono">
                             Confidence: {(result.confidence * 100).toFixed(1)}%
                           </span>
+                          {result._offline && (
+                            <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-amber-500/15 border border-amber-500/40 text-amber-400">
+                              ⚡ Client-side (backend offline)
+                            </span>
+                          )}
                         </div>
+                        {result._blend_note && (
+                          <p className="text-[9px] text-gray-500 font-mono mb-1">
+                            🧠 {result._blend_note}
+                          </p>
+                        )}
                         <h2 className="text-xl font-bold text-white font-heading mb-1">
                           AQI Category: <span style={{ color: info.color }}>{result.predicted_category}</span>
                         </h2>

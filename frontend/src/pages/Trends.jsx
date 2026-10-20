@@ -10,11 +10,14 @@ export default function Trends() {
 
   const SEVERITY_VALUES = {
     "Good": 1,
-    "Moderate": 2,
+    "Satisfactory": 2,
+    "Moderate": 3,
+    "Poor": 4,
+    "Very Poor": 5,
+    "Severe": 6,
     "Unhealthy for Sensitive Groups": 3,
     "Unhealthy": 4,
-    "Very Unhealthy": 5,
-    "Severe": 6
+    "Very Unhealthy": 5
   };
 
   useEffect(() => {

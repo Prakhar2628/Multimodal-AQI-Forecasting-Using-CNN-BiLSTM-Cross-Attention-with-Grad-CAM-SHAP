@@ -6,20 +6,26 @@ import { getHealthProfile } from '../api';
 /* ── AQI Category → base risk score (matches backend health.py) ── */
 const AQI_SCORE = {
   'Good': 5,
-  'Moderate': 18,
+  'Satisfactory': 15,
+  'Moderate': 30,
+  'Poor': 50,
+  'Very Poor': 70,
+  'Severe': 88,
   'Unhealthy for Sensitive Groups': 35,
   'Unhealthy': 50,
-  'Very Unhealthy': 65,
-  'Severe': 78,
+  'Very Unhealthy': 70,
 };
 
 const AQI_COLOR = {
   'Good': '#22c55e',
+  'Satisfactory': '#84cc16',
   'Moderate': '#eab308',
+  'Poor': '#f97316',
+  'Very Poor': '#ef4444',
+  'Severe': '#991b1b',
   'Unhealthy for Sensitive Groups': '#f97316',
   'Unhealthy': '#ef4444',
   'Very Unhealthy': '#a855f7',
-  'Severe': '#991b1b',
 };
 
 /* ── Compute personalized risk score (0-100) — mirrors backend ── */

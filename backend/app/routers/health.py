@@ -32,11 +32,14 @@ class HealthProfileResponse(BaseModel):
 
 AQI_BASE_SCORES = {
     "Good": 5,
-    "Moderate": 18,
+    "Satisfactory": 15,
+    "Moderate": 30,
+    "Poor": 50,
+    "Very Poor": 70,
+    "Severe": 88,
     "Unhealthy for Sensitive Groups": 35,
     "Unhealthy": 50,
-    "Very Unhealthy": 65,
-    "Severe": 78,
+    "Very Unhealthy": 70,
 }
 
 RISK_LEVELS = [(20, "Low"), (40, "Moderate"), (60, "High"), (80, "Very High"), (100, "Critical")]
