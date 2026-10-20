@@ -19,7 +19,11 @@ function saveStoredPrediction(pred) {
 
 async function apiCall(url, options = {}) {
   try {
-    const res = await fetch(url, options);
+    const headers = { ...(options.headers || {}) };
+    if (options.body && typeof options.body === "string" && !headers["Content-Type"]) {
+      headers["Content-Type"] = "application/json";
+    }
+    const res = await fetch(url, { ...options, headers });
     if (!res.ok) {
       const errText = await res.text();
       throw new Error(errText || `HTTP ${res.status}`);
@@ -681,20 +685,56 @@ export async function checkBackendHealth() {
   }
 }
 
+function detectCityFromMessage(text, defaultCity = "Delhi") {
+  if (!text) return defaultCity;
+  const t = text.toLowerCase();
+  const cityMap = {
+    "mumbai": "Mumbai", "bombay": "Mumbai",
+    "bengaluru": "Bengaluru", "bangalore": "Bengaluru", "banglore": "Bengaluru", "blr": "Bengaluru",
+    "delhi": "Delhi", "dilli": "Delhi", "new delhi": "Delhi", "ncr": "Delhi",
+    "kolkata": "Kolkata", "calcutta": "Kolkata",
+    "chennai": "Chennai", "madras": "Chennai",
+    "hyderabad": "Hyderabad", "hydrabad": "Hyderabad",
+    "pune": "Pune", "poona": "Pune",
+    "ahmedabad": "Ahmedabad", "jaipur": "Jaipur", "lucknow": "Lucknow",
+    "patna": "Patna", "chandigarh": "Chandigarh", "noida": "Noida", "dehradun": "Dehradun",
+    "shimla": "Shimla", "kochi": "Kochi", "goa": "Goa"
+  };
+  for (const [alias, canonical] of Object.entries(cityMap)) {
+    if (new RegExp(`\\b${alias}\\b`, 'i').test(t)) {
+      return canonical;
+    }
+  }
+  return defaultCity;
+}
+
 // ── Aero AI Chatbot Assistant ─────────────────────────────────
 export async function sendChatMessage(message, history = [], city = "Delhi", groqApiKey = null) {
+  const targetCity = detectCityFromMessage(message, city || "Delhi");
+  
   try {
-    const payload = { message, history, city };
+    const payload = { message, history, city: targetCity };
     if (groqApiKey) payload.groq_api_key = groqApiKey;
     return await apiCall(`${API_BASE}/chat`, {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload)
     });
   } catch (err) {
-    console.warn("Backend chat endpoint offline, responding with client atmospheric engine:", err);
+    console.warn("Backend chat endpoint error, using client atmospheric engine:", err);
     
-    const cityClean = city || "Delhi";
-    const base = STABLE_CITY_BASELINE[cityClean] || STABLE_CITY_BASELINE["Delhi"];
+    const cityClean = targetCity;
+    const base = STABLE_CITY_BASELINE[cityClean] || {
+      city: cityClean,
+      aqi: 125,
+      category: "Moderate",
+      pm25: 48,
+      pm10: 95,
+      temp: "28°C",
+      humidity: "60%",
+      wind: "2.8 m/s",
+      dominant: "PM2.5"
+    };
     const hum = parseFloat(String(base.humidity).replace("%", "")) || 55;
     
     let rainProb = "Low (15-25% chance)";
