@@ -9,6 +9,7 @@ import PredictionPage from "./pages/PredictionPage";
 import ForecastPage from "./pages/ForecastPage";
 import HealthRiskPage from "./pages/HealthRiskPage";
 import ExplainPage from "./pages/ExplainPage";
+import AIAssistantWidget from "./components/AIAssistantWidget";
 import { getPredictions } from "./api";
 
 function App() {
@@ -48,6 +49,8 @@ function App() {
             <Route path="*" element={<LandingPage />} />
           </Routes>
         </main>
+        
+        <AIAssistantWidget />
       </div>
     </Router>
   );

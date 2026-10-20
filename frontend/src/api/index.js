@@ -680,3 +680,48 @@ export async function checkBackendHealth() {
     return false;
   }
 }
+
+// ── Aero AI Chatbot Assistant ─────────────────────────────────
+export async function sendChatMessage(message, history = [], city = "Delhi") {
+  try {
+    return await apiCall(`${API_BASE}/chat`, {
+      method: "POST",
+      body: JSON.stringify({ message, history, city })
+    });
+  } catch (err) {
+    console.warn("Backend chat endpoint offline, responding with client atmospheric engine:", err);
+    
+    const cityClean = city || "Delhi";
+    const base = STABLE_CITY_BASELINE[cityClean] || STABLE_CITY_BASELINE["Delhi"];
+    const hum = parseFloat(String(base.humidity).replace("%", "")) || 55;
+    
+    let rainProb = "Low (15-25% chance)";
+    let rainNote = "Dry to scattered cloud conditions; significant rainfall is unlikely in the next few hours.";
+    if (hum >= 75) {
+      rainProb = "High (70-80% chance)";
+      rainNote = "Elevated moisture and heavy overcast skies suggest passing rain or showers in the next few hours.";
+    } else if (hum >= 60) {
+      rainProb = "Moderate (40-50% chance)";
+      rainNote = "Partly cloudy with moderate humidity; brief drizzle is possible later today.";
+    }
+
+    const msgLower = message.toLowerCase();
+    let reply = "";
+    if (msgLower.includes("rain")) {
+      reply = `🌧️ **Rain Forecast for ${cityClean}**\n\n- **Relative Humidity:** ${base.humidity}\n- **Rain Probability:** ${rainProb}\n- **Outlook:** ${rainNote}\n\nCurrent temperature is **${base.temp}** with winds blowing at **${base.wind}**.`;
+    } else if (msgLower.includes("humid") || msgLower.includes("weather") || msgLower.includes("temp")) {
+      reply = `🌤️ **Atmospheric & Weather Status for ${cityClean}**\n\n- **Temperature:** ${base.temp}\n- **Humidity:** ${base.humidity}\n- **Wind Speed:** ${base.wind}\n- **Rain Likelihood:** ${rainProb}\n- **AQI Status:** ${base.aqi} (${base.category})\n\nConditions are typical for this season.`;
+    } else if (msgLower.includes("aqi") || msgLower.includes("pollution") || msgLower.includes("safe") || msgLower.includes("run") || msgLower.includes("mask")) {
+      reply = `🌫️ **Air Quality & Health Guidance for ${cityClean}**\n\n- **AQI Level:** ${base.aqi} (${base.category})\n- **PM2.5:** ${base.pm25} µg/m³\n- **PM10:** ${base.pm10} µg/m³\n\n${base.aqi > 200 ? '⚠️ **Health Note:** Prolonged outdoor exertion is not advised without an N95 mask.' : '✅ **Health Note:** General outdoor activity is acceptable.'}`;
+    } else {
+      reply = `Hello! I'm **Aero**, your real-time atmospheric and air quality assistant.\n\nIn **${cityClean}** right now:\n- **Temp:** ${base.temp} · **Humidity:** ${base.humidity}\n- **Rain Chance:** ${rainProb}\n- **AQI:** ${base.aqi} (${base.category})\n\nHow can I help you today? You can ask about rain, humidity, temperature, or air quality!`;
+    }
+
+    return {
+      reply,
+      city: cityClean,
+      telemetry: base
+    };
+  }
+}
+

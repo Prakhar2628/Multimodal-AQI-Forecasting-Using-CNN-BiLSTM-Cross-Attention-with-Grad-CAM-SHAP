@@ -15,6 +15,7 @@ import app.routers.weather as weather
 import app.routers.explain as explain
 import app.routers.health as health
 import app.routers.forecast as forecast
+import app.routers.assistant as assistant
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -51,6 +52,7 @@ app.include_router(weather.router, prefix="/api")
 app.include_router(explain.router, prefix="/api")
 app.include_router(health.router, prefix="/api")
 app.include_router(forecast.router, prefix="/api")
+app.include_router(assistant.router, prefix="/api")
 
 @app.get("/api/health-check")
 async def health_check():
