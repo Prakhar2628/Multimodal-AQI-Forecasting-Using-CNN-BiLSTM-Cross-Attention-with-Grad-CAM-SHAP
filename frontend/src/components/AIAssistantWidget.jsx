@@ -3,14 +3,15 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { 
   Bot, X, Send, Sparkles, CloudRain, Droplets, 
   Wind, Thermometer, ShieldAlert, RotateCcw, 
-  ChevronDown, MapPin, Maximize2, Minimize2, MessageSquare
+  ChevronDown, MapPin, Key, Check, CloudLightning
 } from 'lucide-react';
 import { sendChatMessage } from '../api';
 
-const CITIES = [
-  "Delhi", "Mumbai", "Bengaluru", "Kolkata", 
+const DEFAULT_CITIES = [
+  "Delhi", "Bengaluru", "Mumbai", "Kolkata", 
   "Chennai", "Hyderabad", "Pune", "Ahmedabad", 
-  "Jaipur", "Lucknow", "Patna", "Chandigarh"
+  "Jaipur", "Lucknow", "Patna", "Chandigarh",
+  "Noida", "Dehradun", "Shimla", "Kochi", "Goa"
 ];
 
 const SUGGESTED_QUERIES = [
@@ -22,14 +23,19 @@ const SUGGESTED_QUERIES = [
 
 export default function AIAssistantWidget() {
   const [isOpen, setIsOpen] = useState(false);
+  const [citiesList, setCitiesList] = useState(DEFAULT_CITIES);
   const [selectedCity, setSelectedCity] = useState("Delhi");
   const [inputMessage, setInputMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+  const [showKeyConfig, setShowKeyConfig] = useState(false);
+  const [groqKeyInput, setGroqKeyInput] = useState(() => localStorage.getItem("aero_groq_key") || "");
+  const [savedKeySuccess, setSavedKeySuccess] = useState(false);
+  
   const [messages, setMessages] = useState([
     {
       id: "welcome",
       role: "assistant",
-      content: "Hello! I am **Aero**, your real-time atmospheric and air quality assistant. Ask me anything about current weather, rain predictions, humidity, AQI, or health safety across Indian cities!",
+      content: "Hello! I am **Aero**, your real-time atmospheric and weather assistant.\n\nAsk me anything about current weather, rain predictions, humidity, or AQI for **Bangalore, Delhi, Mumbai, Noida**, or any other city!",
       timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
       telemetry: null
     }
@@ -49,6 +55,21 @@ export default function AIAssistantWidget() {
     }
   }, [isOpen, messages]);
 
+  const handleSaveGroqKey = (e) => {
+    e.preventDefault();
+    const cleanKey = groqKeyInput.trim();
+    if (cleanKey) {
+      localStorage.setItem("aero_groq_key", cleanKey);
+    } else {
+      localStorage.removeItem("aero_groq_key");
+    }
+    setSavedKeySuccess(true);
+    setTimeout(() => {
+      setSavedKeySuccess(false);
+      setShowKeyConfig(false);
+    }, 1200);
+  };
+
   const handleSendMessage = async (textToSend) => {
     const text = (textToSend || inputMessage).trim();
     if (!text || isLoading) return;
@@ -66,7 +87,9 @@ export default function AIAssistantWidget() {
 
     try {
       const historyPayload = messages.map(m => ({ role: m.role, content: m.content }));
-      const response = await sendChatMessage(text, historyPayload, selectedCity);
+      const activeGroqKey = groqKeyInput.trim() || undefined;
+      
+      const response = await sendChatMessage(text, historyPayload, selectedCity, activeGroqKey);
       
       const assistantMsg = {
         id: "aero-" + Date.now(),
@@ -77,8 +100,14 @@ export default function AIAssistantWidget() {
         telemetry: response.telemetry
       };
 
-      if (response.city && response.city !== selectedCity) {
+      if (response.city) {
         setSelectedCity(response.city);
+        setCitiesList(prev => {
+          if (!prev.includes(response.city)) {
+            return [response.city, ...prev];
+          }
+          return prev;
+        });
       }
 
       setMessages(prev => [...prev, assistantMsg]);
@@ -109,7 +138,7 @@ export default function AIAssistantWidget() {
       {
         id: "welcome-cleared",
         role: "assistant",
-        content: `Chat refreshed. Ask me about weather, rain, humidity, or AQI in **${selectedCity}**!`,
+        content: `Chat refreshed. Ask me about weather, rain in next few hours, humidity, or AQI in **${selectedCity}**!`,
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         telemetry: null
       }
@@ -184,19 +213,19 @@ export default function AIAssistantWidget() {
         </motion.button>
       </div>
 
-      {/* ── Floating Chatbot Modal Window ─────────────────────────── */}
+      {/* ── Assistant Modal / Drawer ───────────────────────────────── */}
       <AnimatePresence>
         {isOpen && (
           <motion.div
-            initial={{ opacity: 0, y: 30, scale: 0.94 }}
+            initial={{ opacity: 0, y: 30, scale: 0.95 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
-            exit={{ opacity: 0, y: 30, scale: 0.94 }}
-            transition={{ type: "spring", stiffness: 350, damping: 28 }}
-            className="fixed bottom-24 right-4 sm:right-6 z-50 w-[92vw] sm:w-[420px] h-[580px] max-h-[82vh] bg-[#0b0f19]/95 border border-white/10 rounded-2xl shadow-[0_20px_60px_rgba(0,0,0,0.8)] backdrop-blur-2xl flex flex-col overflow-hidden font-sans"
+            exit={{ opacity: 0, y: 25, scale: 0.95 }}
+            transition={{ type: "spring", damping: 25, stiffness: 300 }}
+            className="fixed bottom-24 right-4 sm:right-6 z-50 w-[92vw] sm:w-[440px] h-[600px] max-h-[85vh] flex flex-col rounded-2xl bg-[#0b0f19]/95 border border-[#00E5B0]/30 shadow-2xl backdrop-blur-xl overflow-hidden font-sans"
           >
-            {/* ── Header ────────────────────────────────────────────── */}
-            <div className="p-4 border-b border-white/8 bg-gradient-to-r from-white/4 to-transparent flex items-center justify-between">
-              <div className="flex items-center gap-3">
+            {/* ── Top Header ────────────────────────────────────────── */}
+            <div className="px-4 py-3 bg-[#0e1424]/90 border-b border-white/10 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2.5">
                 <div className="relative">
                   <div className="w-9 h-9 rounded-xl bg-[#00E5B0]/15 border border-[#00E5B0]/40 flex items-center justify-center">
                     <Bot className="w-5 h-5 text-[#00E5B0]" />
@@ -222,7 +251,7 @@ export default function AIAssistantWidget() {
                     onChange={(e) => setSelectedCity(e.target.value)}
                     className="bg-white/5 border border-white/10 rounded-lg px-2 py-1 text-[11px] text-white focus:outline-none focus:border-[#00E5B0] cursor-pointer appearance-none pr-5 hover:bg-white/10 transition-colors"
                   >
-                    {CITIES.map(c => (
+                    {citiesList.map(c => (
                       <option key={c} value={c} className="bg-[#0b0f19] text-white">
                         {c}
                       </option>
@@ -230,6 +259,15 @@ export default function AIAssistantWidget() {
                   </select>
                   <MapPin className="w-2.5 h-2.5 text-[#00E5B0] absolute right-1.5 top-1/2 -translate-y-1/2 pointer-events-none" />
                 </div>
+
+                {/* Groq Key Config Button */}
+                <button
+                  onClick={() => setShowKeyConfig(prev => !prev)}
+                  title="Configure Groq API Key"
+                  className={`p-1.5 rounded-lg transition-colors ${showKeyConfig ? 'text-[#00E5B0] bg-[#00E5B0]/10' : 'text-gray-400 hover:text-white hover:bg-white/5'}`}
+                >
+                  <Key className="w-3.5 h-3.5" />
+                </button>
 
                 <button
                   onClick={handleClearHistory}
@@ -248,6 +286,45 @@ export default function AIAssistantWidget() {
                 </button>
               </div>
             </div>
+
+            {/* ── Optional Groq API Key Configuration Drawer ──────────── */}
+            <AnimatePresence>
+              {showKeyConfig && (
+                <motion.div
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  className="bg-[#080d17] border-b border-[#00E5B0]/20 px-4 py-3 shrink-0 overflow-hidden"
+                >
+                  <form onSubmit={handleSaveGroqKey} className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[11px] font-semibold text-gray-200 flex items-center gap-1.5">
+                        <Key className="w-3 h-3 text-[#00E5B0]" /> Custom Groq API Key
+                      </span>
+                      <span className="text-[9px] text-gray-400">Optional · Saved locally</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="password"
+                        placeholder="Paste Groq key (gsk_...)"
+                        value={groqKeyInput}
+                        onChange={(e) => setGroqKeyInput(e.target.value)}
+                        className="flex-1 bg-white/5 border border-white/10 rounded-lg px-2.5 py-1 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#00E5B0]"
+                      />
+                      <button
+                        type="submit"
+                        className="px-3 py-1 bg-[#00E5B0] text-slate-950 font-semibold text-xs rounded-lg hover:bg-[#00c99b] transition-colors flex items-center gap-1 shrink-0"
+                      >
+                        {savedKeySuccess ? <Check className="w-3 h-3 text-slate-950" /> : "Save"}
+                      </button>
+                    </div>
+                    <p className="text-[9px] text-gray-400">
+                      If your Groq token ever expires, paste your new key here to restore instant LLM responses.
+                    </p>
+                  </form>
+                </motion.div>
+              )}
+            </AnimatePresence>
 
             {/* ── Messages Feed ─────────────────────────────────────── */}
             <div className="flex-1 overflow-y-auto p-4 space-y-3.5 scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
@@ -283,47 +360,54 @@ export default function AIAssistantWidget() {
                             <span className="flex items-center gap-1 text-teal-300">
                               <Wind className="w-3 h-3" /> {m.telemetry.wind}
                             </span>
-                            <span className="px-1.5 py-0.5 rounded bg-white/5 text-gray-300 font-semibold border border-white/5">
-                              AQI {m.telemetry.aqi}
+                            {m.telemetry.clouds !== undefined && (
+                              <span className="flex items-center gap-1 text-blue-300">
+                                <CloudRain className="w-3 h-3" /> {m.telemetry.clouds}% clouds
+                              </span>
+                            )}
+                            <span className="flex items-center gap-1 text-emerald-400">
+                              AQI: {m.telemetry.aqi}
                             </span>
                           </div>
                         )}
                       </div>
                     ) : (
-                      <p className="whitespace-pre-wrap">{m.content}</p>
+                      <div className="text-xs leading-relaxed">{m.content}</div>
                     )}
 
-                    <div className={`text-[9px] mt-1 text-right ${m.role === 'user' ? 'text-slate-800' : 'text-gray-500'}`}>
+                    <div className={`mt-1 text-[9px] ${m.role === 'user' ? 'text-slate-800' : 'text-gray-500'} text-right`}>
                       {m.timestamp}
                     </div>
                   </div>
                 </div>
               ))}
 
+              {/* Typing indicator */}
               {isLoading && (
-                <div className="flex gap-2.5 items-start">
+                <div className="flex gap-2.5 justify-start items-center">
                   <div className="w-7 h-7 rounded-lg bg-[#00E5B0]/10 border border-[#00E5B0]/30 flex items-center justify-center shrink-0">
-                    <Bot className="w-4 h-4 text-[#00E5B0]" />
+                    <Bot className="w-4 h-4 text-[#00E5B0] animate-pulse" />
                   </div>
-                  <div className="bg-white/5 border border-white/10 rounded-2xl rounded-tl-sm px-4 py-3 text-xs text-gray-300 flex items-center gap-2">
-                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#00E5B0] animate-bounce" style={{ animationDelay: '0ms' }} />
-                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#00E5B0] animate-bounce" style={{ animationDelay: '150ms' }} />
-                    <span className="inline-block w-1.5 h-1.5 rounded-full bg-[#00E5B0] animate-bounce" style={{ animationDelay: '300ms' }} />
-                    <span className="text-[11px] text-gray-400 font-mono ml-1">Analyzing weather telemetry...</span>
+                  <div className="bg-white/5 border border-white/10 rounded-2xl rounded-tl-sm px-3.5 py-2 flex items-center gap-1.5 text-xs text-gray-400">
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#00E5B0] animate-bounce" style={{ animationDelay: '0ms' }} />
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#00E5B0] animate-bounce" style={{ animationDelay: '150ms' }} />
+                    <span className="w-1.5 h-1.5 rounded-full bg-[#00E5B0] animate-bounce" style={{ animationDelay: '300ms' }} />
+                    <span className="ml-1 text-[11px] text-gray-400">Querying live weather & atmospheric radar...</span>
                   </div>
                 </div>
               )}
+
               <div ref={messagesEndRef} />
             </div>
 
-            {/* ── Suggested Question Chips ───────────────────────────── */}
-            <div className="px-3 py-2 border-t border-white/5 bg-black/20 overflow-x-auto scrollbar-none flex gap-1.5">
+            {/* ── Suggested Questions Carousel ──────────────────────── */}
+            <div className="px-3 py-2 bg-[#090d18]/60 border-t border-white/5 overflow-x-auto flex items-center gap-1.5 scrollbar-none shrink-0">
               {SUGGESTED_QUERIES.map((q, idx) => (
                 <button
                   key={idx}
-                  onClick={() => handleSendMessage(`${q.label} in ${selectedCity}`)}
+                  onClick={() => handleSendMessage(q.label)}
                   disabled={isLoading}
-                  className="shrink-0 flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/4 hover:bg-white/10 border border-white/8 text-[10px] text-gray-300 hover:text-white transition-all whitespace-nowrap active:scale-95 disabled:opacity-50"
+                  className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 text-[10px] text-gray-300 hover:text-[#00E5B0] hover:border-[#00E5B0]/40 transition-all shrink-0 cursor-pointer disabled:opacity-50"
                 >
                   {q.icon}
                   <span>{q.label}</span>
@@ -332,29 +416,27 @@ export default function AIAssistantWidget() {
             </div>
 
             {/* ── Input Box ─────────────────────────────────────────── */}
-            <div className="p-3 border-t border-white/8 bg-[#07090e]">
-              <div className="flex items-center gap-2 bg-white/4 border border-white/10 rounded-xl px-3 py-1.5 focus-within:border-[#00E5B0]/60 focus-within:ring-1 focus-within:ring-[#00E5B0]/30 transition-all">
+            <div className="p-3 bg-[#0a0e19] border-t border-white/10 shrink-0">
+              <div className="relative flex items-center">
                 <input
                   ref={inputRef}
                   type="text"
                   value={inputMessage}
                   onChange={(e) => setInputMessage(e.target.value)}
                   onKeyDown={handleKeyDown}
-                  placeholder={`Ask weather, rain, humidity for ${selectedCity}...`}
+                  placeholder={`Ask about weather or rain in ${selectedCity} or other cities...`}
                   disabled={isLoading}
-                  className="flex-1 bg-transparent text-xs text-white placeholder-gray-500 focus:outline-none"
+                  className="w-full bg-white/5 border border-white/10 rounded-xl pl-3.5 pr-11 py-2.5 text-xs text-white placeholder-gray-500 focus:outline-none focus:border-[#00E5B0] focus:ring-1 focus:ring-[#00E5B0] transition-all disabled:opacity-50"
                 />
                 <button
                   onClick={() => handleSendMessage()}
                   disabled={!inputMessage.trim() || isLoading}
-                  className="p-1.5 rounded-lg bg-[#00E5B0] text-slate-950 hover:bg-[#00c598] transition-colors disabled:opacity-40 disabled:cursor-not-allowed shrink-0"
+                  aria-label="Send message"
+                  className="absolute right-1.5 w-8 h-8 rounded-lg bg-[#00E5B0] text-slate-950 flex items-center justify-center hover:bg-[#00c99b] transition-all disabled:opacity-30 disabled:hover:bg-[#00E5B0] disabled:cursor-not-allowed cursor-pointer shadow-md"
                 >
                   <Send className="w-3.5 h-3.5" />
                 </button>
               </div>
-              <p className="text-[9px] text-gray-500 text-center mt-1.5">
-                Real-time CPCB telemetry + AI meteorological synthesis.
-              </p>
             </div>
           </motion.div>
         )}

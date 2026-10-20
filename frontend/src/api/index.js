@@ -682,11 +682,13 @@ export async function checkBackendHealth() {
 }
 
 // ── Aero AI Chatbot Assistant ─────────────────────────────────
-export async function sendChatMessage(message, history = [], city = "Delhi") {
+export async function sendChatMessage(message, history = [], city = "Delhi", groqApiKey = null) {
   try {
+    const payload = { message, history, city };
+    if (groqApiKey) payload.groq_api_key = groqApiKey;
     return await apiCall(`${API_BASE}/chat`, {
       method: "POST",
-      body: JSON.stringify({ message, history, city })
+      body: JSON.stringify(payload)
     });
   } catch (err) {
     console.warn("Backend chat endpoint offline, responding with client atmospheric engine:", err);
